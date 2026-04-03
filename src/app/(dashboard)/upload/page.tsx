@@ -86,20 +86,24 @@ export default function UploadPage() {
   const [editableMoves, setEditableMoves] = useState<OcrMove[]>([]);
   const [validationErrors, setValidationErrors] = useState<Map<number, string>>(new Map());
 
-  // Board replay from validated moves
+  // Board replay from validated moves — also computes notation per row
   const replayData = useMemo(() => {
     const boards = [createInitialBoard()];
     const notations: { notation: string; side: "white" | "black" }[] = [];
+    const rowNotations: { wNotation: string; bNotation: string }[] = [];
     let board = createInitialBoard();
 
     for (const move of editableMoves) {
+      let wNot = "";
+      let bNot = "";
       if (move.w !== null) {
         const result = makeMove(board, move.w as PitIndex);
         if (result) {
           board = result.boardAfter;
           boards.push(board);
+          wNot = result.notation;
           notations.push({ notation: result.notation, side: "white" });
-          if (getGameResult(board) !== "ongoing") break;
+          if (getGameResult(board) !== "ongoing") { rowNotations.push({ wNotation: wNot, bNotation: bNot }); break; }
         }
       }
       if (move.b !== null) {
@@ -107,13 +111,15 @@ export default function UploadPage() {
         if (result) {
           board = result.boardAfter;
           boards.push(board);
+          bNot = result.notation;
           notations.push({ notation: result.notation, side: "black" });
-          if (getGameResult(board) !== "ongoing") break;
+          if (getGameResult(board) !== "ongoing") { rowNotations.push({ wNotation: wNot, bNotation: bNot }); break; }
         }
       }
+      rowNotations.push({ wNotation: wNot, bNotation: bNot });
     }
 
-    return { boards, notations };
+    return { boards, notations, rowNotations };
   }, [editableMoves]);
 
   const [viewStep, setViewStep] = useState(0);
@@ -335,30 +341,44 @@ export default function UploadPage() {
                       <Table.Thead>
                         <Table.Tr>
                           <Table.Th w={50}>#</Table.Th>
-                          <Table.Th>Бастаушы</Table.Th>
-                          <Table.Th>Қостаушы</Table.Th>
-                          <Table.Th w={80}>Статус</Table.Th>
+                          <Table.Th>Бастаушы (лунка)</Table.Th>
+                          <Table.Th>Нотация</Table.Th>
+                          <Table.Th>Қостаушы (лунка)</Table.Th>
+                          <Table.Th>Нотация</Table.Th>
+                          <Table.Th w={60}>OK</Table.Th>
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
-                        {editableMoves.map((move, idx) => (
+                        {editableMoves.map((move, idx) => {
+                          const rn = replayData.rowNotations[idx];
+                          return (
                           <Table.Tr key={idx}>
                             <Table.Td>{move.n}</Table.Td>
                             <Table.Td>
                               <NumberInput
                                 value={move.w ?? undefined}
                                 onChange={(val) => updateMove(idx, "w", typeof val === "number" ? val : null)}
-                                min={1} max={9} size="xs" w={70}
+                                min={1} max={9} size="xs" w={60}
                                 error={validationErrors.has(idx * 2)}
                               />
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm" fw={600} c={validationErrors.has(idx * 2) ? "red" : "teal"}>
+                                {rn?.wNotation || "—"}
+                              </Text>
                             </Table.Td>
                             <Table.Td>
                               <NumberInput
                                 value={move.b ?? undefined}
                                 onChange={(val) => updateMove(idx, "b", typeof val === "number" ? val : null)}
-                                min={1} max={9} size="xs" w={70}
+                                min={1} max={9} size="xs" w={60}
                                 error={validationErrors.has(idx * 2 + 1)}
                               />
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm" fw={600} c={validationErrors.has(idx * 2 + 1) ? "red" : "teal"}>
+                                {rn?.bNotation || "—"}
+                              </Text>
                             </Table.Td>
                             <Table.Td>
                               {validationErrors.has(idx * 2) || validationErrors.has(idx * 2 + 1)
@@ -366,7 +386,8 @@ export default function UploadPage() {
                                 : <Badge color="green" size="sm">OK</Badge>}
                             </Table.Td>
                           </Table.Tr>
-                        ))}
+                          );
+                        })}
                       </Table.Tbody>
                     </Table>
                   </ScrollArea>
