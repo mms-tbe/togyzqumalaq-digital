@@ -10,7 +10,7 @@ export interface StoredGame {
   tournament?: string;
   result: string;
   sourceType: "ocr" | "manual";
-  moves: { moveNumber: number; side: "white" | "black"; pit: number; notation: string }[];
+  moves: { moveNumber: number; side: "white" | "black"; notation: string }[];
   createdAt: string;
   notes?: string;
 }

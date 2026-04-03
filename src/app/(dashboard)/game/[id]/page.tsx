@@ -44,11 +44,12 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
     let board = createInitialBoard();
 
     for (const move of game.moves) {
-      const result = makeMove(board, move.pit as PitIndex);
+      // Extract pit from notation first digit, or fall back to legacy pit field
+      const pit = (move as any).pit ?? parseInt(move.notation[0]);
+      const result = makeMove(board, pit as PitIndex);
       if (result) {
         board = result.boardAfter;
         boards.push(board);
-        // Use stored notation if available, otherwise engine-generated
         notations.push({ notation: move.notation || result.notation, side: move.side });
       }
     }

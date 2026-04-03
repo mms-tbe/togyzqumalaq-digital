@@ -130,7 +130,6 @@ export default function ManualPage() {
         moves: moves.map((m) => ({
           moveNumber: m.moveNumber,
           side: m.side,
-          pit: m.pit,
           notation: m.notation,
         })),
       });

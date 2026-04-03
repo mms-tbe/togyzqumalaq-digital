@@ -211,20 +211,20 @@ export default function UploadPage() {
     setSaving(true);
 
     // Replay moves through engine to generate notation
-    const movesWithNotation: { moveNumber: number; side: "white" | "black"; pit: number; notation: string }[] = [];
+    const movesWithNotation: { moveNumber: number; side: "white" | "black"; notation: string }[] = [];
     let replayBoard = createInitialBoard();
     for (const move of editableMoves) {
       if (move.w !== null) {
         const r = makeMove(replayBoard, move.w as PitIndex);
         if (r) {
-          movesWithNotation.push({ moveNumber: move.n, side: "white", pit: move.w, notation: r.notation });
+          movesWithNotation.push({ moveNumber: move.n, side: "white", notation: r.notation });
           replayBoard = r.boardAfter;
         }
       }
       if (move.b !== null) {
         const r = makeMove(replayBoard, move.b as PitIndex);
         if (r) {
-          movesWithNotation.push({ moveNumber: move.n, side: "black", pit: move.b, notation: r.notation });
+          movesWithNotation.push({ moveNumber: move.n, side: "black", notation: r.notation });
           replayBoard = r.boardAfter;
         }
       }
