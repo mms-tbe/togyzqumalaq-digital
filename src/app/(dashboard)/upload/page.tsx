@@ -210,10 +210,24 @@ export default function UploadPage() {
   function handleSave() {
     setSaving(true);
 
-    const moves: { moveNumber: number; side: "white" | "black"; pit: number }[] = [];
+    // Replay moves through engine to generate notation
+    const movesWithNotation: { moveNumber: number; side: "white" | "black"; pit: number; notation: string }[] = [];
+    let replayBoard = createInitialBoard();
     for (const move of editableMoves) {
-      if (move.w !== null) moves.push({ moveNumber: move.n, side: "white", pit: move.w });
-      if (move.b !== null) moves.push({ moveNumber: move.n, side: "black", pit: move.b });
+      if (move.w !== null) {
+        const r = makeMove(replayBoard, move.w as PitIndex);
+        if (r) {
+          movesWithNotation.push({ moveNumber: move.n, side: "white", pit: move.w, notation: r.notation });
+          replayBoard = r.boardAfter;
+        }
+      }
+      if (move.b !== null) {
+        const r = makeMove(replayBoard, move.b as PitIndex);
+        if (r) {
+          movesWithNotation.push({ moveNumber: move.n, side: "black", pit: move.b, notation: r.notation });
+          replayBoard = r.boardAfter;
+        }
+      }
     }
 
     try {
@@ -223,7 +237,7 @@ export default function UploadPage() {
         tournament: tournament || undefined,
         result: gameResult || "ongoing",
         sourceType: "ocr",
-        moves,
+        moves: movesWithNotation,
       });
 
       notifications.show({ message: "Партия сохранена!", color: "green" });

@@ -48,7 +48,8 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
       if (result) {
         board = result.boardAfter;
         boards.push(board);
-        notations.push({ notation: result.notation, side: move.side });
+        // Use stored notation if available, otherwise engine-generated
+        notations.push({ notation: move.notation || result.notation, side: move.side });
       }
     }
     return { boards, notations };

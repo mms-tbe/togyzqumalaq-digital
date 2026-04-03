@@ -131,6 +131,7 @@ export default function ManualPage() {
           moveNumber: m.moveNumber,
           side: m.side,
           pit: m.pit,
+          notation: m.notation,
         })),
       });
 
