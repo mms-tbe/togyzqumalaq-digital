@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="248" fill="#72dde0" />
+  <circle cx="256" cy="256" r="230" fill="#5ccfd2" />
+
+  <!-- Board shape -->
+  <rect x="56" y="170" width="400" height="172" rx="20" fill="#4abfc3" stroke="#3a9e9e" stroke-width="4"/>
+
+  <!-- Top pits (9) -->
+  <g>
+    <rect x="72" y="182" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+    <rect x="114" y="182" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+    <rect x="156" y="182" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+    <rect x="198" y="182" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+    <rect x="240" y="182" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+    <rect x="282" y="182" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+    <rect x="324" y="182" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+    <rect x="366" y="182" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+    <rect x="408" y="182" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+  </g>
+
+  <!-- Bottom pits (9) -->
+  <g>
+    <rect x="72" y="274" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+    <rect x="114" y="274" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+    <rect x="156" y="274" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+    <rect x="198" y="274" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+    <rect x="240" y="274" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+    <rect x="282" y="274" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+    <rect x="324" y="274" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+    <rect x="366" y="274" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+    <rect x="408" y="274" width="34" height="56" rx="6" fill="#3a9e9e" opacity="0.7"/>
+  </g>
+
+  <!-- Count badges (top row) -->
+  <g fill="#1a1a1a">
+    <circle cx="89" cy="256" r="11"/><text x="89" y="260" text-anchor="middle" fill="#fff" font-size="12" font-weight="700" font-family="system-ui">9</text>
+    <circle cx="131" cy="256" r="11"/><text x="131" y="260" text-anchor="middle" fill="#fff" font-size="12" font-weight="700" font-family="system-ui">9</text>
+    <circle cx="173" cy="256" r="11"/><text x="173" y="260" text-anchor="middle" fill="#fff" font-size="12" font-weight="700" font-family="system-ui">9</text>
+    <circle cx="215" cy="256" r="11"/><text x="215" y="260" text-anchor="middle" fill="#fff" font-size="12" font-weight="700" font-family="system-ui">9</text>
+    <circle cx="257" cy="256" r="11"/><text x="257" y="260" text-anchor="middle" fill="#fff" font-size="12" font-weight="700" font-family="system-ui">9</text>
+    <circle cx="299" cy="256" r="11"/><text x="299" y="260" text-anchor="middle" fill="#fff" font-size="12" font-weight="700" font-family="system-ui">9</text>
+    <circle cx="341" cy="256" r="11"/><text x="341" y="260" text-anchor="middle" fill="#fff" font-size="12" font-weight="700" font-family="system-ui">9</text>
+    <circle cx="383" cy="256" r="11"/><text x="383" y="260" text-anchor="middle" fill="#fff" font-size="12" font-weight="700" font-family="system-ui">9</text>
+    <circle cx="425" cy="256" r="11"/><text x="425" y="260" text-anchor="middle" fill="#fff" font-size="12" font-weight="700" font-family="system-ui">9</text>
+  </g>
+
+  <!-- Stones in pits (dark spheres) -->
+  <g>
+    <!-- Sample stones in a few pits -->
+    <circle cx="82" cy="198" r="6" fill="#333"/><circle cx="96" cy="198" r="6" fill="#333"/>
+    <circle cx="82" cy="212" r="6" fill="#333"/><circle cx="96" cy="212" r="6" fill="#333"/>
+    <circle cx="82" cy="226" r="6" fill="#333"/>
+
+    <circle cx="166" cy="198" r="6" fill="#333"/><circle cx="180" cy="198" r="6" fill="#333"/>
+    <circle cx="166" cy="212" r="6" fill="#333"/><circle cx="180" cy="212" r="6" fill="#333"/>
+    <circle cx="166" cy="226" r="6" fill="#333"/>
+
+    <circle cx="250" cy="198" r="6" fill="#333"/><circle cx="264" cy="198" r="6" fill="#333"/>
+    <circle cx="250" cy="212" r="6" fill="#333"/><circle cx="264" cy="212" r="6" fill="#333"/>
+    <circle cx="250" cy="226" r="6" fill="#333"/>
+
+    <circle cx="334" cy="198" r="6" fill="#333"/><circle cx="348" cy="198" r="6" fill="#333"/>
+    <circle cx="334" cy="212" r="6" fill="#333"/><circle cx="348" cy="212" r="6" fill="#333"/>
+    <circle cx="334" cy="226" r="6" fill="#333"/>
+
+    <circle cx="418" cy="198" r="6" fill="#333"/><circle cx="432" cy="198" r="6" fill="#333"/>
+    <circle cx="418" cy="212" r="6" fill="#333"/><circle cx="432" cy="212" r="6" fill="#333"/>
+    <circle cx="418" cy="226" r="6" fill="#333"/>
+  </g>
+
+  <!-- AI scan line -->
+  <line x1="56" y1="256" x2="456" y2="256" stroke="#e67322" stroke-width="2" stroke-dasharray="8,4" opacity="0.8"/>
+
+  <!-- Kazan (score) indicators -->
+  <rect x="100" y="370" width="140" height="24" rx="12" fill="#e0e0e0"/>
+  <rect x="100" y="370" width="50" height="24" rx="12" fill="#5bbfc3"/>
+  <circle cx="230" cy="382" r="14" fill="#e67322"/>
+  <text x="230" y="387" text-anchor="middle" fill="#fff" font-size="13" font-weight="800" font-family="system-ui">0</text>
+
+  <rect x="272" y="370" width="140" height="24" rx="12" fill="#e0e0e0"/>
+  <rect x="272" y="370" width="50" height="24" rx="12" fill="#5bbfc3"/>
+  <circle cx="402" cy="382" r="14" fill="#e67322"/>
+  <text x="402" y="387" text-anchor="middle" fill="#fff" font-size="13" font-weight="800" font-family="system-ui">0</text>
+
+  <!-- OCR scan corners -->
+  <path d="M96 130 L96 110 L116 110" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <path d="M416 130 L416 110 L396 110" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <path d="M96 402 L96 422 L116 422" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <path d="M416 402 L416 422 L396 422" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none"/>
+</svg>
