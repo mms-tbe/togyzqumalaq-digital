@@ -34,7 +34,7 @@ export default function RegisterPage() {
   return (
     <Card shadow="md" padding="xl" radius="md" withBorder>
       <Stack align="center" mb="md">
-        <Image src="/logo.png" alt="Togyzqumalaq" width={64} height={64} />
+        <Image src="/logo.png" alt="Togyzqumalaq" width={128} height={128} />
         <Title order={2}>Регистрация</Title>
         <Text c="dimmed" size="sm">
           Togyzqumalaq Digital

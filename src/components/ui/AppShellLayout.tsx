@@ -37,7 +37,7 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
         <Group h="100%" px="md" justify="space-between">
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Image src="/logo.png" alt="Togyzqumalaq" width={36} height={36} />
+            <Image src="/logo.png" alt="Togyzqumalaq" width={72} height={72} />
             <Title order={3} size="h4">
               Togyzqumalaq Digital
             </Title>
