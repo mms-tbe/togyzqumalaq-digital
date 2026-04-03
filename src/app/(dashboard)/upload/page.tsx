@@ -235,13 +235,6 @@ export default function UploadPage() {
     setViewStep(0);
   }
 
-  function enableEdit(index: number, field: "w" | "b") {
-    // Force re-edit by keeping the value but triggering re-render
-    // Just set the value to itself — the UI will show NumberInput because we track editing state
-    setEditingCell({ index, field });
-  }
-
-  const [editingCell, setEditingCell] = useState<{ index: number; field: "w" | "b" } | null>(null);
 
   function handleSave() {
     setSaving(true);
@@ -382,55 +375,45 @@ export default function UploadPage() {
                           const rn = replayData.rowNotations[idx];
                           const wError = validationErrors.has(idx * 2);
                           const bError = validationErrors.has(idx * 2 + 1);
-                          const wOk = rn?.wNotation && !wError;
-                          const bOk = rn?.bNotation && !bError;
-                          const wEditing = editingCell?.index === idx && editingCell?.field === "w";
-                          const bEditing = editingCell?.index === idx && editingCell?.field === "b";
                           const isEmpty = move.w === null && move.b === null;
-                          const hasError = wError || bError;
-                          const rowOk = (wOk || move.w === null) && (bOk || move.b === null) && !isEmpty;
+                          const hasError = (move.w !== null && wError) || (move.b !== null && bError);
+                          const rowOk = !isEmpty && !hasError && (move.w !== null || move.b !== null);
                           return (
                           <Table.Tr key={idx}>
                             <Table.Td>{move.n}</Table.Td>
                             <Table.Td>
-                              {wOk && !wEditing ? (
-                                <Text size="sm" fw={700}
-                                  style={{ cursor: "pointer" }}
-                                  title="Нажмите для редактирования"
-                                  onClick={() => enableEdit(idx, "w")}
-                                >{rn.wNotation}</Text>
-                              ) : (
+                              <Group gap={6} wrap="nowrap">
                                 <NumberInput
                                   value={move.w ?? undefined}
-                                  onChange={(val) => {
-                                    updateMove(idx, "w", typeof val === "number" ? val : null);
-                                    setEditingCell(null);
-                                  }}
-                                  min={1} max={9} size="xs" w={60}
-                                  error={wError}
-                                  placeholder="1-9"
+                                  onChange={(val) => updateMove(idx, "w", typeof val === "number" ? val : null)}
+                                  min={1} max={9} size="xs" w={50}
+                                  error={wError && move.w !== null}
+                                  placeholder="—"
+                                  hideControls
                                 />
-                              )}
+                                {rn?.wNotation && (
+                                  <Text size="xs" fw={600} c={wError ? "red" : "teal"}>
+                                    {rn.wNotation}
+                                  </Text>
+                                )}
+                              </Group>
                             </Table.Td>
                             <Table.Td>
-                              {bOk && !bEditing ? (
-                                <Text size="sm" fw={700}
-                                  style={{ cursor: "pointer" }}
-                                  title="Нажмите для редактирования"
-                                  onClick={() => enableEdit(idx, "b")}
-                                >{rn.bNotation}</Text>
-                              ) : (
+                              <Group gap={6} wrap="nowrap">
                                 <NumberInput
                                   value={move.b ?? undefined}
-                                  onChange={(val) => {
-                                    updateMove(idx, "b", typeof val === "number" ? val : null);
-                                    setEditingCell(null);
-                                  }}
-                                  min={1} max={9} size="xs" w={60}
-                                  error={bError}
-                                  placeholder="1-9"
+                                  onChange={(val) => updateMove(idx, "b", typeof val === "number" ? val : null)}
+                                  min={1} max={9} size="xs" w={50}
+                                  error={bError && move.b !== null}
+                                  placeholder="—"
+                                  hideControls
                                 />
-                              )}
+                                {rn?.bNotation && (
+                                  <Text size="xs" fw={600} c={bError ? "red" : "teal"}>
+                                    {rn.bNotation}
+                                  </Text>
+                                )}
+                              </Group>
                             </Table.Td>
                             <Table.Td>
                               {hasError
