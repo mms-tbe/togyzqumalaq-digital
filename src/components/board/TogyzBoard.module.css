@@ -1,0 +1,242 @@
+.wrapper {
+  max-width: 700px;
+  margin: 0 auto;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* ── Board ── */
+.board {
+  background: linear-gradient(135deg, #5ecece 0%, #42b8b8 50%, #3aacac 100%);
+  border-radius: 8px;
+  padding: 4px 8px;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* ── Pit numbers ── */
+.pitNumbers {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  text-align: center;
+  padding: 2px 0;
+}
+
+.pitNumber {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a6b6b;
+}
+
+/* ── Pits row ── */
+.pitsRow {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 4px;
+  padding: 2px 0;
+}
+
+/* ── Single pit ── */
+.pit {
+  background: linear-gradient(180deg, #3a9e9e 0%, #4ab8b8 30%, #5ecece 100%);
+  border-radius: 6px;
+  min-height: 80px;
+  padding: 6px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    inset 0 3px 8px rgba(0, 0, 0, 0.35),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.2);
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.pit.clickable {
+  cursor: pointer;
+}
+
+.pit.clickable:hover {
+  background: linear-gradient(180deg, #4ab8b8 0%, #5ecece 30%, #72dada 100%);
+  box-shadow:
+    inset 0 3px 8px rgba(0, 0, 0, 0.2),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.3),
+    0 0 12px rgba(255, 165, 0, 0.4);
+}
+
+.tuzPit {
+  background: linear-gradient(180deg, #c0392b 0%, #e74c3c 50%, #c0392b 100%) !important;
+  box-shadow:
+    inset 0 3px 8px rgba(0, 0, 0, 0.4),
+    0 0 8px rgba(231, 76, 60, 0.5) !important;
+}
+
+.tuzMarker {
+  position: absolute;
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  letter-spacing: 2px;
+}
+
+/* ── Stones inside pit ── */
+.stonesGrid {
+  display: grid;
+  gap: 3px;
+  justify-items: center;
+  align-items: center;
+}
+
+.stone {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #666 0%, #333 40%, #111 100%);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 2px rgba(255, 255, 255, 0.15);
+}
+
+/* ── Count badges between rows ── */
+.badgesRow {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 4px;
+  padding: 3px 0;
+  justify-items: center;
+}
+
+.countBadge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #444 0%, #1a1a1a 100%);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  user-select: none;
+  transition: transform 0.15s ease;
+}
+
+.activeBadge {
+  cursor: pointer;
+}
+
+.activeBadge:hover {
+  transform: scale(1.15);
+  background: radial-gradient(circle at 40% 35%, #f0a020 0%, #d48800 100%);
+}
+
+.tuzBadge {
+  background: radial-gradient(circle at 40% 35%, #e74c3c 0%, #a93226 100%);
+}
+
+.divider {
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 20%, rgba(255, 255, 255, 0.4) 80%, transparent 100%);
+  margin: 0;
+}
+
+/* ── Kazan score bar ── */
+.kazanBar {
+  position: relative;
+  height: 32px;
+  background: #ddd;
+  border-radius: 6px;
+  margin: 6px 0;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.kazanTop .kazanFill {
+  background: linear-gradient(90deg, #42b8b8, #5ecece);
+}
+
+.kazanBottom .kazanFill {
+  background: linear-gradient(90deg, #42b8b8, #5ecece);
+}
+
+.kazanFill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  transition: width 0.4s ease;
+  border-radius: 6px;
+}
+
+.kazanScore {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #e67e22;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 28px;
+  text-align: center;
+  z-index: 1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.kazanLabel {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  z-index: 1;
+}
+
+/* ── Player label ── */
+.playerLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  padding: 2px 4px;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 2px;
+}
+
+/* ── Turn indicator ── */
+.turnIndicator {
+  text-align: center;
+  font-size: 13px;
+  color: #666;
+  margin-top: 8px;
+  padding: 4px 0;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .pit {
+    min-height: 55px;
+    padding: 4px 2px;
+  }
+
+  .stone {
+    width: 11px;
+    height: 11px;
+  }
+
+  .countBadge {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+  }
+
+  .pitNumber {
+    font-size: 11px;
+  }
+}
