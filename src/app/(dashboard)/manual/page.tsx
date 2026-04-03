@@ -21,7 +21,7 @@ import { BoardControls } from "@/components/board/BoardControls";
 import { type PitIndex, type BoardState } from "@/lib/engine/types";
 import { createInitialBoard, makeMove, getGameResult, boardToFen } from "@/lib/engine/TogyzEngine";
 import { generatePgn, toPgnMoves } from "@/lib/engine/pgn";
-import { saveGame } from "@/actions/games";
+import { saveGameLocal } from "@/lib/storage/games";
 import { useRouter } from "next/navigation";
 
 interface RecordedMove {
@@ -118,29 +118,29 @@ export default function ManualPage() {
     setViewStep(Math.max(0, Math.min(step, history.length - 1)));
   }
 
-  async function handleSave() {
+  function handleSave() {
     setSaving(true);
-    const result = await saveGame({
-      whitePlayer: whitePlayer || "Бастаушы",
-      blackPlayer: blackPlayer || "Қостаушы",
-      tournament: tournament || undefined,
-      result: gameResult || (getGameResult(board) !== "ongoing" ? getGameResult(board) : "ongoing"),
-      sourceType: "manual",
-      moves: moves.map((m) => ({
-        moveNumber: m.moveNumber,
-        side: m.side,
-        pit: m.pit,
-      })),
-    });
+    try {
+      const gameId = saveGameLocal({
+        whitePlayer: whitePlayer || "Бастаушы",
+        blackPlayer: blackPlayer || "Қостаушы",
+        tournament: tournament || undefined,
+        result: gameResult || (getGameResult(board) !== "ongoing" ? getGameResult(board) : "ongoing"),
+        sourceType: "manual",
+        moves: moves.map((m) => ({
+          moveNumber: m.moveNumber,
+          side: m.side,
+          pit: m.pit,
+        })),
+      });
 
-    setSaving(false);
-    if (result.error) {
-      notifications.show({ message: result.error, color: "red" });
-      return;
+      notifications.show({ message: "Партия сохранена!", color: "green" });
+      router.push(`/game/${gameId}`);
+    } catch (err) {
+      notifications.show({ message: "Ошибка сохранения", color: "red" });
+    } finally {
+      setSaving(false);
     }
-
-    notifications.show({ message: "Партия сохранена!", color: "green" });
-    router.push(`/game/${result.gameId}`);
   }
 
   const result = getGameResult(board);

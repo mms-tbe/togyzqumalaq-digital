@@ -31,7 +31,7 @@ import {
   IconPlayerPlay,
 } from "@tabler/icons-react";
 import { processOcrDirect } from "@/actions/ocr";
-import { saveGame } from "@/actions/games";
+import { saveGameLocal } from "@/lib/storage/games";
 import { parseOcrResponse, type OcrResult, type OcrMove } from "@/lib/ocr/parser";
 import { type PitIndex } from "@/lib/engine/types";
 import { createInitialBoard, makeMove, getGameResult, boardToFen } from "@/lib/engine/TogyzEngine";
@@ -207,7 +207,7 @@ export default function UploadPage() {
     setViewStep(0);
   }
 
-  async function handleSave() {
+  function handleSave() {
     setSaving(true);
 
     const moves: { moveNumber: number; side: "white" | "black"; pit: number }[] = [];
@@ -216,25 +216,23 @@ export default function UploadPage() {
       if (move.b !== null) moves.push({ moveNumber: move.n, side: "black", pit: move.b });
     }
 
-    const result = await saveGame({
-      whitePlayer: whitePlayer || "Бастаушы",
-      blackPlayer: blackPlayer || "Қостаушы",
-      tournament: tournament || undefined,
-      result: gameResult || "ongoing",
-      sourceType: "ocr",
-      ocrModelUsed: "deepseek-ocr",
-      moves,
-    });
+    try {
+      const gameId = saveGameLocal({
+        whitePlayer: whitePlayer || "Бастаушы",
+        blackPlayer: blackPlayer || "Қостаушы",
+        tournament: tournament || undefined,
+        result: gameResult || "ongoing",
+        sourceType: "ocr",
+        moves,
+      });
 
-    setSaving(false);
-
-    if (result.error) {
-      notifications.show({ message: result.error, color: "red" });
-      return;
+      notifications.show({ message: "Партия сохранена!", color: "green" });
+      router.push(`/game/${gameId}`);
+    } catch {
+      notifications.show({ message: "Ошибка сохранения", color: "red" });
+    } finally {
+      setSaving(false);
     }
-
-    notifications.show({ message: "Партия сохранена!", color: "green" });
-    router.push(`/game/${result.gameId}`);
   }
 
   return (

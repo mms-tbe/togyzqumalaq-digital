@@ -10,64 +10,35 @@ import {
   Badge,
   Button,
   SimpleGrid,
-  Loader,
-  Center,
   ActionIcon,
 } from "@mantine/core";
 import { IconEye, IconTrash, IconArchive } from "@tabler/icons-react";
-import { getGames, deleteGame } from "@/actions/games";
+import { getGamesLocal, deleteGameLocal, type StoredGame } from "@/lib/storage/games";
 import { useRouter } from "next/navigation";
 import { notifications } from "@mantine/notifications";
-
-interface Game {
-  id: string;
-  result: string;
-  round: number | null;
-  date_played: string | null;
-  source_type: string;
-  notes: string | null;
-  created_at: string;
-}
 
 const RESULT_LABELS: Record<string, { label: string; color: string }> = {
   white: { label: "1-0", color: "blue" },
   black: { label: "0-1", color: "red" },
   draw: { label: "½-½", color: "gray" },
   ongoing: { label: "...", color: "yellow" },
+  "1-0": { label: "1-0", color: "blue" },
+  "0-1": { label: "0-1", color: "red" },
+  "1/2-1/2": { label: "½-½", color: "gray" },
 };
 
 export default function ArchivePage() {
   const router = useRouter();
-  const [games, setGames] = useState<Game[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [games, setGames] = useState<StoredGame[]>([]);
 
   useEffect(() => {
-    loadGames();
+    setGames(getGamesLocal());
   }, []);
 
-  async function loadGames() {
-    setLoading(true);
-    const result = await getGames();
-    setGames(result.games as Game[]);
-    setLoading(false);
-  }
-
-  async function handleDelete(id: string) {
-    const result = await deleteGame(id);
-    if (result.error) {
-      notifications.show({ message: result.error, color: "red" });
-    } else {
-      notifications.show({ message: "Партия удалена", color: "green" });
-      loadGames();
-    }
-  }
-
-  if (loading) {
-    return (
-      <Center h={300}>
-        <Loader />
-      </Center>
-    );
+  function handleDelete(id: string) {
+    deleteGameLocal(id);
+    setGames(getGamesLocal());
+    notifications.show({ message: "Партия удалена", color: "green" });
   }
 
   return (
@@ -82,9 +53,7 @@ export default function ArchivePage() {
           <Stack align="center" gap="md">
             <IconArchive size={48} stroke={1} />
             <Text c="dimmed">Нет сохранённых партий</Text>
-            <Button onClick={() => router.push("/upload")}>
-              Загрузить бланк
-            </Button>
+            <Button onClick={() => router.push("/upload")}>Загрузить бланк</Button>
           </Stack>
         </Card>
       ) : (
@@ -97,14 +66,17 @@ export default function ArchivePage() {
                   <Group justify="space-between">
                     <Badge color={r.color}>{r.label}</Badge>
                     <Badge variant="light">
-                      {game.source_type === "ocr" ? "OCR" : "Ручной"}
+                      {game.sourceType === "ocr" ? "OCR" : "Ручной"}
                     </Badge>
                   </Group>
-                  <Text size="sm" lineClamp={2}>
-                    {game.notes || "Без описания"}
+                  <Text size="sm" fw={500}>
+                    {game.whitePlayer} vs {game.blackPlayer}
                   </Text>
+                  {game.tournament && (
+                    <Text size="xs" c="dimmed">{game.tournament}</Text>
+                  )}
                   <Text size="xs" c="dimmed">
-                    {new Date(game.created_at).toLocaleDateString("ru-RU")}
+                    {new Date(game.createdAt).toLocaleDateString("ru-RU")} | {game.moves.length} ходов
                   </Text>
                   <Group justify="flex-end">
                     <Button
@@ -115,11 +87,7 @@ export default function ArchivePage() {
                     >
                       Открыть
                     </Button>
-                    <ActionIcon
-                      variant="light"
-                      color="red"
-                      onClick={() => handleDelete(game.id)}
-                    >
+                    <ActionIcon variant="light" color="red" onClick={() => handleDelete(game.id)}>
                       <IconTrash size={14} />
                     </ActionIcon>
                   </Group>
