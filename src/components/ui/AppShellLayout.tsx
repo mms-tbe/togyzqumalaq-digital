@@ -12,7 +12,7 @@ import {
 } from "@tabler/icons-react";
 import { usePathname, useRouter } from "next/navigation";
 import { UserMenu } from "./UserMenu";
-import { LogoIcon } from "./LogoIcon";
+import Image from "next/image";
 
 const NAV_ITEMS = [
   { label: "Загрузить бланк", href: "/upload", icon: IconUpload },
@@ -37,7 +37,7 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
         <Group h="100%" px="md" justify="space-between">
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <LogoIcon size={32} />
+            <Image src="/logo.png" alt="Togyzqumalaq" width={36} height={36} />
             <Title order={3} size="h4">
               Togyzqumalaq Digital
             </Title>

@@ -12,7 +12,7 @@ import {
   Alert,
 } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
-import { LogoIcon } from "@/components/ui/LogoIcon";
+import Image from "next/image";
 import { signIn } from "@/actions/auth";
 import { useState } from "react";
 import Link from "next/link";
@@ -34,7 +34,7 @@ export default function LoginPage() {
   return (
     <Card shadow="md" padding="xl" radius="md" withBorder>
       <Stack align="center" mb="md">
-        <LogoIcon size={48} />
+        <Image src="/logo.png" alt="Togyzqumalaq" width={64} height={64} />
         <Title order={2}>Вход</Title>
         <Text c="dimmed" size="sm">
           Togyzqumalaq Digital
