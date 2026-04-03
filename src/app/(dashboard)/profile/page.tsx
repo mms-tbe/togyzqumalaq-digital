@@ -7,66 +7,50 @@ import {
   Paper,
   TextInput,
   Button,
-  Loader,
-  Center,
   Group,
   Text,
   Badge,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconUser } from "@tabler/icons-react";
-import { getProfile, updateProfile } from "@/actions/auth";
 
-interface Profile {
-  id: string;
-  display_name: string;
-  club: string | null;
+const PROFILE_KEY = "togyz_profile";
+
+interface LocalProfile {
+  displayName: string;
+  club: string;
   rating: number;
-  role: string;
+}
+
+function loadLocalProfile(): LocalProfile {
+  if (typeof window === "undefined") return { displayName: "", club: "", rating: 1200 };
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    return raw ? JSON.parse(raw) : { displayName: "", club: "", rating: 1200 };
+  } catch {
+    return { displayName: "", club: "", rating: 1200 };
+  }
+}
+
+function saveLocalProfile(profile: LocalProfile) {
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
 }
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [club, setClub] = useState("");
+  const [rating, setRating] = useState(1200);
 
   useEffect(() => {
-    loadProfile();
+    const p = loadLocalProfile();
+    setDisplayName(p.displayName);
+    setClub(p.club);
+    setRating(p.rating);
   }, []);
 
-  async function loadProfile() {
-    setLoading(true);
-    const data = await getProfile();
-    if (data) {
-      setProfile(data as Profile);
-      setDisplayName(data.display_name || "");
-      setClub(data.club || "");
-    }
-    setLoading(false);
-  }
-
-  async function handleSave() {
-    setSaving(true);
-    const formData = new FormData();
-    formData.set("displayName", displayName);
-    formData.set("club", club);
-    const result = await updateProfile(formData);
-    setSaving(false);
-    if (result.error) {
-      notifications.show({ message: result.error, color: "red" });
-    } else {
-      notifications.show({ message: "Профиль обновлён", color: "green" });
-    }
-  }
-
-  if (loading) {
-    return (
-      <Center h={300}>
-        <Loader />
-      </Center>
-    );
+  function handleSave() {
+    saveLocalProfile({ displayName, club, rating });
+    notifications.show({ message: "Профиль сохранён", color: "green" });
   }
 
   return (
@@ -78,12 +62,10 @@ export default function ProfilePage() {
           <Group>
             <IconUser size={40} />
             <div>
-              <Text fw={600}>{profile?.display_name}</Text>
+              <Text fw={600}>{displayName || "Игрок"}</Text>
               <Group gap="xs">
-                <Badge size="sm">{profile?.role}</Badge>
-                <Badge size="sm" variant="light">
-                  Рейтинг: {profile?.rating}
-                </Badge>
+                <Badge size="sm">player</Badge>
+                <Badge size="sm" variant="light">Рейтинг: {rating}</Badge>
               </Group>
             </div>
           </Group>
@@ -92,6 +74,7 @@ export default function ProfilePage() {
             label="Имя"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
+            placeholder="Ваше имя"
           />
           <TextInput
             label="Клуб"
@@ -99,7 +82,7 @@ export default function ProfilePage() {
             onChange={(e) => setClub(e.target.value)}
             placeholder="Название клуба"
           />
-          <Button onClick={handleSave} loading={saving}>
+          <Button onClick={handleSave}>
             Сохранить
           </Button>
         </Stack>
