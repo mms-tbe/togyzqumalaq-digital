@@ -19,6 +19,7 @@ import {
   Badge,
   ScrollArea,
   Grid,
+  ActionIcon,
 } from "@mantine/core";
 import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { notifications } from "@mantine/notifications";
@@ -213,6 +214,28 @@ export default function UploadPage() {
     setViewStep(0);
   }
 
+  function addMoveRow() {
+    const nextN = editableMoves.length > 0 ? editableMoves[editableMoves.length - 1].n + 1 : 1;
+    setEditableMoves([...editableMoves, { n: nextN, w: null, b: null }]);
+  }
+
+  function deleteMoveRow(index: number) {
+    const updated = editableMoves.filter((_, i) => i !== index);
+    // Renumber
+    const renumbered = updated.map((m, i) => ({ ...m, n: i + 1 }));
+    setEditableMoves(renumbered);
+    validateMoves(renumbered);
+    setViewStep(0);
+  }
+
+  function enableEdit(index: number, field: "w" | "b") {
+    // Force re-edit by keeping the value but triggering re-render
+    // Just set the value to itself — the UI will show NumberInput because we track editing state
+    setEditingCell({ index, field });
+  }
+
+  const [editingCell, setEditingCell] = useState<{ index: number; field: "w" | "b" } | null>(null);
+
   function handleSave() {
     setSaving(true);
 
@@ -332,18 +355,23 @@ export default function UploadPage() {
                 <Paper p="md" withBorder>
                   <Group justify="space-between" mb="xs">
                     <Text fw={600}>Распознанные ходы</Text>
-                    {validationErrors.size > 0 && (
-                      <Badge color="orange">{validationErrors.size} ошибок</Badge>
-                    )}
+                    <Group gap="xs">
+                      {validationErrors.size > 0 && (
+                        <Badge color="orange">{validationErrors.size} ошибок</Badge>
+                      )}
+                      <Button size="xs" variant="light" onClick={addMoveRow} leftSection={<IconCheck size={14} />}>
+                        + Ход
+                      </Button>
+                    </Group>
                   </Group>
-                  <ScrollArea h={300}>
+                  <ScrollArea h={350}>
                     <Table striped highlightOnHover>
                       <Table.Thead>
                         <Table.Tr>
-                          <Table.Th w={50}>#</Table.Th>
+                          <Table.Th w={40}>#</Table.Th>
                           <Table.Th>Бастаушы</Table.Th>
                           <Table.Th>Қостаушы</Table.Th>
-                          <Table.Th w={60}>OK</Table.Th>
+                          <Table.Th w={50}></Table.Th>
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
@@ -353,16 +381,25 @@ export default function UploadPage() {
                           const bError = validationErrors.has(idx * 2 + 1);
                           const wOk = rn?.wNotation && !wError;
                           const bOk = rn?.bNotation && !bError;
+                          const wEditing = editingCell?.index === idx && editingCell?.field === "w";
+                          const bEditing = editingCell?.index === idx && editingCell?.field === "b";
                           return (
                           <Table.Tr key={idx}>
                             <Table.Td>{move.n}</Table.Td>
                             <Table.Td>
-                              {wOk ? (
-                                <Text size="sm" fw={700}>{rn.wNotation}</Text>
+                              {wOk && !wEditing ? (
+                                <Text size="sm" fw={700}
+                                  style={{ cursor: "pointer" }}
+                                  title="Нажмите для редактирования"
+                                  onClick={() => enableEdit(idx, "w")}
+                                >{rn.wNotation}</Text>
                               ) : (
                                 <NumberInput
                                   value={move.w ?? undefined}
-                                  onChange={(val) => updateMove(idx, "w", typeof val === "number" ? val : null)}
+                                  onChange={(val) => {
+                                    updateMove(idx, "w", typeof val === "number" ? val : null);
+                                    setEditingCell(null);
+                                  }}
                                   min={1} max={9} size="xs" w={60}
                                   error={wError}
                                   placeholder="1-9"
@@ -370,12 +407,19 @@ export default function UploadPage() {
                               )}
                             </Table.Td>
                             <Table.Td>
-                              {bOk ? (
-                                <Text size="sm" fw={700}>{rn.bNotation}</Text>
+                              {bOk && !bEditing ? (
+                                <Text size="sm" fw={700}
+                                  style={{ cursor: "pointer" }}
+                                  title="Нажмите для редактирования"
+                                  onClick={() => enableEdit(idx, "b")}
+                                >{rn.bNotation}</Text>
                               ) : (
                                 <NumberInput
                                   value={move.b ?? undefined}
-                                  onChange={(val) => updateMove(idx, "b", typeof val === "number" ? val : null)}
+                                  onChange={(val) => {
+                                    updateMove(idx, "b", typeof val === "number" ? val : null);
+                                    setEditingCell(null);
+                                  }}
                                   min={1} max={9} size="xs" w={60}
                                   error={bError}
                                   placeholder="1-9"
@@ -383,9 +427,10 @@ export default function UploadPage() {
                               )}
                             </Table.Td>
                             <Table.Td>
-                              {wError || bError
-                                ? <Badge color="red" size="sm">!</Badge>
-                                : <Badge color="green" size="sm">OK</Badge>}
+                              <ActionIcon size="xs" variant="subtle" color="red"
+                                onClick={() => deleteMoveRow(idx)} title="Удалить ход">
+                                <IconX size={12} />
+                              </ActionIcon>
                             </Table.Td>
                           </Table.Tr>
                           );
