@@ -341,10 +341,8 @@ export default function UploadPage() {
                       <Table.Thead>
                         <Table.Tr>
                           <Table.Th w={50}>#</Table.Th>
-                          <Table.Th>Бастаушы (лунка)</Table.Th>
-                          <Table.Th>Нотация</Table.Th>
-                          <Table.Th>Қостаушы (лунка)</Table.Th>
-                          <Table.Th>Нотация</Table.Th>
+                          <Table.Th>Бастаушы</Table.Th>
+                          <Table.Th>Қостаушы</Table.Th>
                           <Table.Th w={60}>OK</Table.Th>
                         </Table.Tr>
                       </Table.Thead>
@@ -355,30 +353,40 @@ export default function UploadPage() {
                           <Table.Tr key={idx}>
                             <Table.Td>{move.n}</Table.Td>
                             <Table.Td>
-                              <NumberInput
-                                value={move.w ?? undefined}
-                                onChange={(val) => updateMove(idx, "w", typeof val === "number" ? val : null)}
-                                min={1} max={9} size="xs" w={60}
-                                error={validationErrors.has(idx * 2)}
-                              />
+                              <Group gap={4} wrap="nowrap">
+                                <NumberInput
+                                  value={move.w ?? undefined}
+                                  onChange={(val) => updateMove(idx, "w", typeof val === "number" ? val : null)}
+                                  min={1} max={9} size="xs" w={55}
+                                  error={validationErrors.has(idx * 2)}
+                                  styles={{ input: { display: rn?.wNotation ? "none" : undefined } }}
+                                  style={{ display: rn?.wNotation ? "none" : undefined }}
+                                />
+                                {rn?.wNotation && (
+                                  <Text size="sm" fw={700} c={validationErrors.has(idx * 2) ? "red" : undefined}
+                                    style={{ cursor: "pointer" }}
+                                    onClick={() => { /* allow re-edit by clearing notation */ }}
+                                  >
+                                    {rn.wNotation}
+                                  </Text>
+                                )}
+                              </Group>
                             </Table.Td>
                             <Table.Td>
-                              <Text size="sm" fw={600} c={validationErrors.has(idx * 2) ? "red" : "teal"}>
-                                {rn?.wNotation || "—"}
-                              </Text>
-                            </Table.Td>
-                            <Table.Td>
-                              <NumberInput
-                                value={move.b ?? undefined}
-                                onChange={(val) => updateMove(idx, "b", typeof val === "number" ? val : null)}
-                                min={1} max={9} size="xs" w={60}
-                                error={validationErrors.has(idx * 2 + 1)}
-                              />
-                            </Table.Td>
-                            <Table.Td>
-                              <Text size="sm" fw={600} c={validationErrors.has(idx * 2 + 1) ? "red" : "teal"}>
-                                {rn?.bNotation || "—"}
-                              </Text>
+                              <Group gap={4} wrap="nowrap">
+                                <NumberInput
+                                  value={move.b ?? undefined}
+                                  onChange={(val) => updateMove(idx, "b", typeof val === "number" ? val : null)}
+                                  min={1} max={9} size="xs" w={55}
+                                  error={validationErrors.has(idx * 2 + 1)}
+                                  style={{ display: rn?.bNotation ? "none" : undefined }}
+                                />
+                                {rn?.bNotation && (
+                                  <Text size="sm" fw={700} c={validationErrors.has(idx * 2 + 1) ? "red" : undefined}>
+                                    {rn.bNotation}
+                                  </Text>
+                                )}
+                              </Group>
                             </Table.Td>
                             <Table.Td>
                               {validationErrors.has(idx * 2) || validationErrors.has(idx * 2 + 1)
