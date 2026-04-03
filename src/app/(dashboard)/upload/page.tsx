@@ -83,8 +83,9 @@ export default function UploadPage() {
   const [tournament, setTournament] = useState("");
   const [gameResult, setGameResult] = useState<string | null>(null);
 
-  // Editable moves
-  const [editableMoves, setEditableMoves] = useState<OcrMove[]>([]);
+  // Editable moves — default 80 empty rows
+  const defaultMoves: OcrMove[] = Array.from({ length: 80 }, (_, i) => ({ n: i + 1, w: null, b: null }));
+  const [editableMoves, setEditableMoves] = useState<OcrMove[]>(defaultMoves);
   const [validationErrors, setValidationErrors] = useState<Map<number, string>>(new Map());
 
   // Board replay from validated moves — also computes notation per row
@@ -191,7 +192,13 @@ export default function UploadPage() {
       }
 
       setOcrResult(parsed);
-      setEditableMoves(parsed.moves);
+      // Fill up to 80 rows
+      const ocrMoves = parsed.moves;
+      const padded = [...ocrMoves];
+      for (let i = ocrMoves.length; i < 80; i++) {
+        padded.push({ n: i + 1, w: null, b: null });
+      }
+      setEditableMoves(padded);
       setWhitePlayer(parsed.white_player || "");
       setBlackPlayer(parsed.black_player || "");
       setTournament(parsed.tournament || "");
@@ -355,23 +362,19 @@ export default function UploadPage() {
                 <Paper p="md" withBorder>
                   <Group justify="space-between" mb="xs">
                     <Text fw={600}>Распознанные ходы</Text>
-                    <Group gap="xs">
-                      {validationErrors.size > 0 && (
-                        <Badge color="orange">{validationErrors.size} ошибок</Badge>
-                      )}
-                      <Button size="xs" variant="light" onClick={addMoveRow} leftSection={<IconCheck size={14} />}>
-                        + Ход
-                      </Button>
-                    </Group>
+                    {validationErrors.size > 0 && (
+                      <Badge color="orange">{validationErrors.size} ошибок</Badge>
+                    )}
                   </Group>
-                  <ScrollArea h={350}>
+                  <ScrollArea h={400}>
                     <Table striped highlightOnHover>
                       <Table.Thead>
                         <Table.Tr>
                           <Table.Th w={40}>#</Table.Th>
                           <Table.Th>Бастаушы</Table.Th>
                           <Table.Th>Қостаушы</Table.Th>
-                          <Table.Th w={50}></Table.Th>
+                          <Table.Th w={55}>Статус</Table.Th>
+                          <Table.Th w={35}></Table.Th>
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
@@ -383,6 +386,9 @@ export default function UploadPage() {
                           const bOk = rn?.bNotation && !bError;
                           const wEditing = editingCell?.index === idx && editingCell?.field === "w";
                           const bEditing = editingCell?.index === idx && editingCell?.field === "b";
+                          const isEmpty = move.w === null && move.b === null;
+                          const hasError = wError || bError;
+                          const rowOk = (wOk || move.w === null) && (bOk || move.b === null) && !isEmpty;
                           return (
                           <Table.Tr key={idx}>
                             <Table.Td>{move.n}</Table.Td>
@@ -427,6 +433,13 @@ export default function UploadPage() {
                               )}
                             </Table.Td>
                             <Table.Td>
+                              {hasError
+                                ? <Badge color="red" size="sm">!</Badge>
+                                : rowOk
+                                  ? <Badge color="green" size="sm">OK</Badge>
+                                  : null}
+                            </Table.Td>
+                            <Table.Td>
                               <ActionIcon size="xs" variant="subtle" color="red"
                                 onClick={() => deleteMoveRow(idx)} title="Удалить ход">
                                 <IconX size={12} />
@@ -438,6 +451,9 @@ export default function UploadPage() {
                       </Table.Tbody>
                     </Table>
                   </ScrollArea>
+                  <Button size="xs" variant="light" onClick={addMoveRow} mt="xs" fullWidth>
+                    + Добавить ход
+                  </Button>
                 </Paper>
               </Stack>
             </Grid.Col>
