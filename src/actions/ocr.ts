@@ -10,8 +10,7 @@ export async function processOcrDirect(base64Image: string, mimeType: string) {
   try {
     const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-    // Combined prompt (no system message — some vision models ignore it)
-    const fullPrompt = `${OCR_SYSTEM_PROMPT}\n\n${OCR_USER_PROMPT}`;
+    const fullPrompt = OCR_USER_PROMPT;
 
     const response = await fetch("https://llm.alem.ai/v1/chat/completions", {
       method: "POST",
