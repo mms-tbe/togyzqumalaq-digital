@@ -349,47 +349,41 @@ export default function UploadPage() {
                       <Table.Tbody>
                         {editableMoves.map((move, idx) => {
                           const rn = replayData.rowNotations[idx];
+                          const wError = validationErrors.has(idx * 2);
+                          const bError = validationErrors.has(idx * 2 + 1);
+                          const wOk = rn?.wNotation && !wError;
+                          const bOk = rn?.bNotation && !bError;
                           return (
                           <Table.Tr key={idx}>
                             <Table.Td>{move.n}</Table.Td>
                             <Table.Td>
-                              <Group gap={4} wrap="nowrap">
+                              {wOk ? (
+                                <Text size="sm" fw={700}>{rn.wNotation}</Text>
+                              ) : (
                                 <NumberInput
                                   value={move.w ?? undefined}
                                   onChange={(val) => updateMove(idx, "w", typeof val === "number" ? val : null)}
-                                  min={1} max={9} size="xs" w={55}
-                                  error={validationErrors.has(idx * 2)}
-                                  styles={{ input: { display: rn?.wNotation ? "none" : undefined } }}
-                                  style={{ display: rn?.wNotation ? "none" : undefined }}
+                                  min={1} max={9} size="xs" w={60}
+                                  error={wError}
+                                  placeholder="1-9"
                                 />
-                                {rn?.wNotation && (
-                                  <Text size="sm" fw={700} c={validationErrors.has(idx * 2) ? "red" : undefined}
-                                    style={{ cursor: "pointer" }}
-                                    onClick={() => { /* allow re-edit by clearing notation */ }}
-                                  >
-                                    {rn.wNotation}
-                                  </Text>
-                                )}
-                              </Group>
+                              )}
                             </Table.Td>
                             <Table.Td>
-                              <Group gap={4} wrap="nowrap">
+                              {bOk ? (
+                                <Text size="sm" fw={700}>{rn.bNotation}</Text>
+                              ) : (
                                 <NumberInput
                                   value={move.b ?? undefined}
                                   onChange={(val) => updateMove(idx, "b", typeof val === "number" ? val : null)}
-                                  min={1} max={9} size="xs" w={55}
-                                  error={validationErrors.has(idx * 2 + 1)}
-                                  style={{ display: rn?.bNotation ? "none" : undefined }}
+                                  min={1} max={9} size="xs" w={60}
+                                  error={bError}
+                                  placeholder="1-9"
                                 />
-                                {rn?.bNotation && (
-                                  <Text size="sm" fw={700} c={validationErrors.has(idx * 2 + 1) ? "red" : undefined}>
-                                    {rn.bNotation}
-                                  </Text>
-                                )}
-                              </Group>
+                              )}
                             </Table.Td>
                             <Table.Td>
-                              {validationErrors.has(idx * 2) || validationErrors.has(idx * 2 + 1)
+                              {wError || bError
                                 ? <Badge color="red" size="sm">!</Badge>
                                 : <Badge color="green" size="sm">OK</Badge>}
                             </Table.Td>
