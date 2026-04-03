@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   Title,
   Stepper,
@@ -18,6 +18,7 @@ import {
   Alert,
   Badge,
   ScrollArea,
+  Grid,
 } from "@mantine/core";
 import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { notifications } from "@mantine/notifications";
@@ -27,24 +28,40 @@ import {
   IconX,
   IconCheck,
   IconAlertCircle,
+  IconPlayerPlay,
 } from "@tabler/icons-react";
-import { uploadSheet } from "@/actions/upload";
-import { triggerOcr, getOcrJobStatus } from "@/actions/ocr";
+import { processOcrDirect } from "@/actions/ocr";
 import { saveGame } from "@/actions/games";
-import { parseOcrResponse, ocrMovesToParsed, type OcrResult, type OcrMove } from "@/lib/ocr/parser";
+import { parseOcrResponse, type OcrResult, type OcrMove } from "@/lib/ocr/parser";
 import { type PitIndex } from "@/lib/engine/types";
-import { createInitialBoard, makeMove, getGameResult } from "@/lib/engine/TogyzEngine";
+import { createInitialBoard, makeMove, getGameResult, boardToFen } from "@/lib/engine/TogyzEngine";
+import { TogyzBoard } from "@/components/board/TogyzBoard";
+import { MoveListPanel } from "@/components/board/MoveListPanel";
+import { BoardControls } from "@/components/board/BoardControls";
+import { generatePgn, toPgnMoves } from "@/lib/engine/pgn";
 import { useRouter } from "next/navigation";
+
+/** Convert File to base64 string */
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Remove data:image/...;base64, prefix
+      const base64 = result.split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function UploadPage() {
   const router = useRouter();
   const [active, setActive] = useState(0);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [progress, setProgress] = useState(0);
-  const [ocrStatus, setOcrStatus] = useState<string>("pending");
+  const [processing, setProcessing] = useState(false);
   const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -58,44 +75,45 @@ export default function UploadPage() {
   // Editable moves
   const [editableMoves, setEditableMoves] = useState<OcrMove[]>([]);
   const [validationErrors, setValidationErrors] = useState<Map<number, string>>(new Map());
-  const [filePath, setFilePath] = useState<string | null>(null);
 
-  // Poll OCR status
-  useEffect(() => {
-    if (!jobId || ocrStatus === "completed" || ocrStatus === "failed") return;
+  // Board replay from validated moves
+  const replayData = useMemo(() => {
+    const boards = [createInitialBoard()];
+    const notations: { notation: string; side: "white" | "black" }[] = [];
+    let board = createInitialBoard();
 
-    const interval = setInterval(async () => {
-      const result = await getOcrJobStatus(jobId);
-      if (result.error) return;
-      const job = result.job;
-      if (!job) return;
-
-      setProgress(job.progress || 0);
-      setOcrStatus(job.status);
-
-      if (job.status === "completed" && job.raw_result) {
-        const parsed = parseOcrResponse(job.raw_result.content);
-        if (parsed) {
-          setOcrResult(parsed);
-          setEditableMoves(parsed.moves);
-          setWhitePlayer(parsed.white_player || "");
-          setBlackPlayer(parsed.black_player || "");
-          setTournament(parsed.tournament || "");
-          setGameResult(parsed.result);
-          validateMoves(parsed.moves);
-          setActive(2);
-        } else {
-          setOcrError("Не удалось распарсить ответ OCR");
+    for (const move of editableMoves) {
+      if (move.w !== null) {
+        const result = makeMove(board, move.w as PitIndex);
+        if (result) {
+          board = result.boardAfter;
+          boards.push(board);
+          notations.push({ notation: result.notation, side: "white" });
+          if (getGameResult(board) !== "ongoing") break;
         }
-        clearInterval(interval);
-      } else if (job.status === "failed") {
-        setOcrError(job.error_message || "Ошибка OCR");
-        clearInterval(interval);
       }
-    }, 2000);
+      if (move.b !== null) {
+        const result = makeMove(board, move.b as PitIndex);
+        if (result) {
+          board = result.boardAfter;
+          boards.push(board);
+          notations.push({ notation: result.notation, side: "black" });
+          if (getGameResult(board) !== "ongoing") break;
+        }
+      }
+    }
 
-    return () => clearInterval(interval);
-  }, [jobId, ocrStatus]);
+    return { boards, notations };
+  }, [editableMoves]);
+
+  const [viewStep, setViewStep] = useState(0);
+  const viewBoard = replayData.boards[viewStep] || createInitialBoard();
+  const currentFen = useMemo(() => boardToFen(viewBoard), [viewBoard]);
+  const pgnMoves = useMemo(() => toPgnMoves(replayData.notations), [replayData.notations]);
+  const pgnText = useMemo(
+    () => generatePgn(replayData.notations, { white: whitePlayer, black: blackPlayer, event: tournament, result: gameResult || undefined }),
+    [replayData.notations, whitePlayer, blackPlayer, tournament, gameResult]
+  );
 
   function validateMoves(moves: OcrMove[]) {
     const errors = new Map<number, string>();
@@ -103,19 +121,15 @@ export default function UploadPage() {
 
     for (let i = 0; i < moves.length; i++) {
       const move = moves[i];
-
-      // Validate white move
       if (move.w !== null) {
         const result = makeMove(board, move.w as PitIndex);
         if (!result) {
           errors.set(i * 2, `Ход белых ${move.w} невалиден`);
-          break; // Can't continue validation after invalid move
+          break;
         }
         board = result.boardAfter;
         if (getGameResult(board) !== "ongoing") break;
       }
-
-      // Validate black move
       if (move.b !== null) {
         const result = makeMove(board, move.b as PitIndex);
         if (!result) {
@@ -130,40 +144,49 @@ export default function UploadPage() {
     setValidationErrors(errors);
   }
 
-  const handleDrop = useCallback(async (files: File[]) => {
+  const handleDrop = useCallback((files: File[]) => {
     const f = files[0];
     setFile(f);
     setPreview(URL.createObjectURL(f));
   }, []);
 
-  async function handleUpload() {
+  async function handleOcr() {
     if (!file) return;
-    setUploading(true);
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const uploadResult = await uploadSheet(formData);
-    if (uploadResult.error) {
-      notifications.show({ message: uploadResult.error, color: "red" });
-      setUploading(false);
-      return;
-    }
-
-    setFilePath(uploadResult.filePath!);
-
-    // Trigger OCR
-    const ocrTrigger = await triggerOcr(uploadResult.filePath!);
-    if (ocrTrigger.error) {
-      notifications.show({ message: ocrTrigger.error, color: "red" });
-      setUploading(false);
-      return;
-    }
-
-    setJobId(ocrTrigger.jobId!);
-    setOcrStatus("processing");
+    setProcessing(true);
+    setOcrError(null);
     setActive(1);
-    setUploading(false);
+
+    try {
+      const base64 = await fileToBase64(file);
+      const result = await processOcrDirect(base64, file.type);
+
+      if (result.error) {
+        setOcrError(result.error);
+        setProcessing(false);
+        return;
+      }
+
+      const parsed = parseOcrResponse(result.content!);
+      if (!parsed) {
+        setOcrError("Не удалось распарсить ответ OCR. Попробуйте другое фото.");
+        setProcessing(false);
+        return;
+      }
+
+      setOcrResult(parsed);
+      setEditableMoves(parsed.moves);
+      setWhitePlayer(parsed.white_player || "");
+      setBlackPlayer(parsed.black_player || "");
+      setTournament(parsed.tournament || "");
+      setGameResult(parsed.result);
+      validateMoves(parsed.moves);
+      setViewStep(0);
+      setActive(2);
+    } catch (err) {
+      setOcrError(err instanceof Error ? err.message : "Ошибка");
+    } finally {
+      setProcessing(false);
+    }
   }
 
   function updateMove(index: number, field: "w" | "b", value: number | null) {
@@ -171,6 +194,7 @@ export default function UploadPage() {
     updated[index] = { ...updated[index], [field]: value };
     setEditableMoves(updated);
     validateMoves(updated);
+    setViewStep(0);
   }
 
   async function handleSave() {
@@ -178,21 +202,16 @@ export default function UploadPage() {
 
     const moves: { moveNumber: number; side: "white" | "black"; pit: number }[] = [];
     for (const move of editableMoves) {
-      if (move.w !== null) {
-        moves.push({ moveNumber: move.n, side: "white", pit: move.w });
-      }
-      if (move.b !== null) {
-        moves.push({ moveNumber: move.n, side: "black", pit: move.b });
-      }
+      if (move.w !== null) moves.push({ moveNumber: move.n, side: "white", pit: move.w });
+      if (move.b !== null) moves.push({ moveNumber: move.n, side: "black", pit: move.b });
     }
 
     const result = await saveGame({
-      whitePlayer: whitePlayer || "Белые",
-      blackPlayer: blackPlayer || "Чёрные",
+      whitePlayer: whitePlayer || "Бастаушы",
+      blackPlayer: blackPlayer || "Қостаушы",
       tournament: tournament || undefined,
       result: gameResult || "ongoing",
       sourceType: "ocr",
-      sourceFileUrl: filePath || undefined,
       ocrModelUsed: "deepseek-ocr",
       moves,
     });
@@ -213,7 +232,7 @@ export default function UploadPage() {
       <Title order={2}>Загрузка турнирного бланка</Title>
 
       <Stepper active={active}>
-        <Stepper.Step label="Загрузка" description="Выберите файл">
+        <Stepper.Step label="Загрузка" description="Выберите фото">
           <Paper p="md" withBorder mt="md">
             <Dropzone
               onDrop={handleDrop}
@@ -222,22 +241,12 @@ export default function UploadPage() {
               multiple={false}
             >
               <Group justify="center" gap="xl" mih={200} style={{ pointerEvents: "none" }}>
-                <Dropzone.Accept>
-                  <IconUpload size={52} stroke={1.5} />
-                </Dropzone.Accept>
-                <Dropzone.Reject>
-                  <IconX size={52} stroke={1.5} />
-                </Dropzone.Reject>
-                <Dropzone.Idle>
-                  <IconPhoto size={52} stroke={1.5} />
-                </Dropzone.Idle>
+                <Dropzone.Accept><IconUpload size={52} stroke={1.5} /></Dropzone.Accept>
+                <Dropzone.Reject><IconX size={52} stroke={1.5} /></Dropzone.Reject>
+                <Dropzone.Idle><IconPhoto size={52} stroke={1.5} /></Dropzone.Idle>
                 <div>
-                  <Text size="xl" inline>
-                    Перетащите фото бланка сюда
-                  </Text>
-                  <Text size="sm" c="dimmed" inline mt={7}>
-                    JPEG, PNG до 20 МБ
-                  </Text>
+                  <Text size="xl" inline>Перетащите фото бланка сюда</Text>
+                  <Text size="sm" c="dimmed" inline mt={7}>JPEG, PNG до 20 МБ</Text>
                 </div>
               </Group>
             </Dropzone>
@@ -245,7 +254,12 @@ export default function UploadPage() {
             {preview && (
               <Stack mt="md" align="center">
                 <Image src={preview} alt="Preview" maw={400} radius="md" />
-                <Button onClick={handleUpload} loading={uploading} size="lg">
+                <Button
+                  onClick={handleOcr}
+                  loading={processing}
+                  size="lg"
+                  leftSection={<IconPlayerPlay size={20} />}
+                >
                   Распознать бланк
                 </Button>
               </Stack>
@@ -256,125 +270,126 @@ export default function UploadPage() {
         <Stepper.Step label="Обработка" description="OCR распознавание">
           <Paper p="xl" withBorder mt="md">
             <Stack align="center" gap="md">
-              <Text size="lg">Распознавание бланка...</Text>
-              <Progress value={progress} size="xl" w="100%" animated />
-              <Text c="dimmed">
-                {ocrStatus === "processing" ? "Обработка изображения AI моделью" : ocrStatus}
-              </Text>
-              {ocrError && (
-                <Alert icon={<IconAlertCircle size={16} />} color="red" w="100%">
+              {processing ? (
+                <>
+                  <Text size="lg">Распознавание бланка AI моделью...</Text>
+                  <Progress value={60} size="xl" w="100%" animated />
+                  <Text c="dimmed">Это может занять 10-30 секунд</Text>
+                </>
+              ) : ocrError ? (
+                <Alert icon={<IconAlertCircle size={16} />} color="red" w="100%" title="Ошибка OCR">
                   {ocrError}
+                  <Button mt="md" variant="light" onClick={() => { setActive(0); setOcrError(null); }}>
+                    Попробовать снова
+                  </Button>
                 </Alert>
-              )}
+              ) : null}
             </Stack>
           </Paper>
         </Stepper.Step>
 
-        <Stepper.Step label="Результат" description="Проверка и сохранение">
-          <Paper p="md" withBorder mt="md">
-            <Stack>
-              <Group grow>
-                <TextInput
-                  label="Белые (Бастаушы)"
-                  value={whitePlayer}
-                  onChange={(e) => setWhitePlayer(e.target.value)}
+        <Stepper.Step label="Результат" description="Проверка и партия">
+          <Grid mt="md">
+            <Grid.Col span={{ base: 12, md: 7 }}>
+              <Stack>
+                {/* Board preview */}
+                <TogyzBoard board={viewBoard} />
+                <BoardControls
+                  currentStep={viewStep}
+                  totalSteps={replayData.boards.length - 1}
+                  onStepChange={setViewStep}
                 />
-                <TextInput
-                  label="Чёрные (Қостаушы)"
-                  value={blackPlayer}
-                  onChange={(e) => setBlackPlayer(e.target.value)}
-                />
-              </Group>
-              <Group grow>
-                <TextInput
-                  label="Турнир"
-                  value={tournament}
-                  onChange={(e) => setTournament(e.target.value)}
-                />
-                <Select
-                  label="Результат"
-                  value={gameResult}
-                  onChange={setGameResult}
-                  data={[
-                    { value: "1-0", label: "1-0 (Белые)" },
-                    { value: "0-1", label: "0-1 (Чёрные)" },
-                    { value: "1/2-1/2", label: "½-½ (Ничья)" },
-                  ]}
-                  clearable
-                />
-              </Group>
 
-              {validationErrors.size > 0 && (
-                <Alert icon={<IconAlertCircle size={16} />} color="orange">
-                  Обнаружены невалидные ходы. Проверьте и исправьте выделенные ячейки.
-                </Alert>
-              )}
+                {/* Editable move table */}
+                <Paper p="md" withBorder>
+                  <Group justify="space-between" mb="xs">
+                    <Text fw={600}>Распознанные ходы</Text>
+                    {validationErrors.size > 0 && (
+                      <Badge color="orange">{validationErrors.size} ошибок</Badge>
+                    )}
+                  </Group>
+                  <ScrollArea h={300}>
+                    <Table striped highlightOnHover>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th w={50}>#</Table.Th>
+                          <Table.Th>Бастаушы</Table.Th>
+                          <Table.Th>Қостаушы</Table.Th>
+                          <Table.Th w={80}>Статус</Table.Th>
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {editableMoves.map((move, idx) => (
+                          <Table.Tr key={idx}>
+                            <Table.Td>{move.n}</Table.Td>
+                            <Table.Td>
+                              <NumberInput
+                                value={move.w ?? undefined}
+                                onChange={(val) => updateMove(idx, "w", typeof val === "number" ? val : null)}
+                                min={1} max={9} size="xs" w={70}
+                                error={validationErrors.has(idx * 2)}
+                              />
+                            </Table.Td>
+                            <Table.Td>
+                              <NumberInput
+                                value={move.b ?? undefined}
+                                onChange={(val) => updateMove(idx, "b", typeof val === "number" ? val : null)}
+                                min={1} max={9} size="xs" w={70}
+                                error={validationErrors.has(idx * 2 + 1)}
+                              />
+                            </Table.Td>
+                            <Table.Td>
+                              {validationErrors.has(idx * 2) || validationErrors.has(idx * 2 + 1)
+                                ? <Badge color="red" size="sm">!</Badge>
+                                : <Badge color="green" size="sm">OK</Badge>}
+                            </Table.Td>
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  </ScrollArea>
+                </Paper>
+              </Stack>
+            </Grid.Col>
 
-              <ScrollArea h={400}>
-                <Table striped highlightOnHover>
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th w={60}>#</Table.Th>
-                      <Table.Th>Белые</Table.Th>
-                      <Table.Th>Чёрные</Table.Th>
-                      <Table.Th w={100}>Статус</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {editableMoves.map((move, idx) => (
-                      <Table.Tr key={idx}>
-                        <Table.Td>{move.n}</Table.Td>
-                        <Table.Td>
-                          <NumberInput
-                            value={move.w ?? undefined}
-                            onChange={(val) =>
-                              updateMove(idx, "w", typeof val === "number" ? val : null)
-                            }
-                            min={1}
-                            max={9}
-                            size="xs"
-                            w={70}
-                            error={validationErrors.has(idx * 2)}
-                          />
-                        </Table.Td>
-                        <Table.Td>
-                          <NumberInput
-                            value={move.b ?? undefined}
-                            onChange={(val) =>
-                              updateMove(idx, "b", typeof val === "number" ? val : null)
-                            }
-                            min={1}
-                            max={9}
-                            size="xs"
-                            w={70}
-                            error={validationErrors.has(idx * 2 + 1)}
-                          />
-                        </Table.Td>
-                        <Table.Td>
-                          {validationErrors.has(idx * 2) || validationErrors.has(idx * 2 + 1) ? (
-                            <Badge color="red" size="sm">Ошибка</Badge>
-                          ) : (
-                            <Badge color="green" size="sm">OK</Badge>
-                          )}
-                        </Table.Td>
-                      </Table.Tr>
-                    ))}
-                  </Table.Tbody>
-                </Table>
-              </ScrollArea>
+            <Grid.Col span={{ base: 12, md: 5 }}>
+              <Stack>
+                {/* FEN + PGN + Move list */}
+                <MoveListPanel
+                  moves={pgnMoves}
+                  fen={currentFen}
+                  pgn={pgnText}
+                  currentStep={viewStep}
+                  onStepChange={setViewStep}
+                />
 
-              <Group justify="flex-end">
-                <Button
-                  leftSection={<IconCheck size={16} />}
-                  onClick={handleSave}
-                  loading={saving}
-                  size="lg"
-                >
-                  Сохранить партию
-                </Button>
-              </Group>
-            </Stack>
-          </Paper>
+                {/* Metadata + Save */}
+                <Paper p="md" withBorder>
+                  <Stack>
+                    <Group grow>
+                      <TextInput label="Бастаушы" value={whitePlayer} onChange={(e) => setWhitePlayer(e.target.value)} />
+                      <TextInput label="Қостаушы" value={blackPlayer} onChange={(e) => setBlackPlayer(e.target.value)} />
+                    </Group>
+                    <TextInput label="Турнир" value={tournament} onChange={(e) => setTournament(e.target.value)} />
+                    <Select
+                      label="Результат"
+                      value={gameResult}
+                      onChange={setGameResult}
+                      data={[
+                        { value: "1-0", label: "1-0 (Бастаушы)" },
+                        { value: "0-1", label: "0-1 (Қостаушы)" },
+                        { value: "1/2-1/2", label: "½-½ (Ничья)" },
+                      ]}
+                      clearable
+                    />
+                    <Button leftSection={<IconCheck size={16} />} onClick={handleSave} loading={saving} size="lg">
+                      Сохранить партию
+                    </Button>
+                  </Stack>
+                </Paper>
+              </Stack>
+            </Grid.Col>
+          </Grid>
         </Stepper.Step>
       </Stepper>
     </Stack>
