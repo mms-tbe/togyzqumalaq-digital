@@ -41,18 +41,28 @@ import { BoardControls } from "@/components/board/BoardControls";
 import { generatePgn, toPgnMoves } from "@/lib/engine/pgn";
 import { useRouter } from "next/navigation";
 
-/** Convert File to base64 string */
-function fileToBase64(file: File): Promise<string> {
+/** Resize image to max dimension and return base64 (JPEG quality 0.85) */
+function resizeAndBase64(file: File, maxDim = 1024): Promise<{ base64: string; mime: string }> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // Remove data:image/...;base64, prefix
-      const base64 = result.split(",")[1];
-      resolve(base64);
+    const img = new window.Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        const scale = maxDim / Math.max(width, height);
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      const base64 = dataUrl.split(",")[1];
+      resolve({ base64, mime: "image/jpeg" });
     };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
   });
 }
 
@@ -157,8 +167,8 @@ export default function UploadPage() {
     setActive(1);
 
     try {
-      const base64 = await fileToBase64(file);
-      const result = await processOcrDirect(base64, file.type);
+      const { base64, mime } = await resizeAndBase64(file, 1024);
+      const result = await processOcrDirect(base64, mime);
 
       if (result.error) {
         setOcrError(result.error);
