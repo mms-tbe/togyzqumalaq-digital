@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Title,
   Stack,
@@ -9,17 +9,18 @@ import {
   Button,
   TextInput,
   Select,
-  Table,
   Badge,
   Grid,
   Text,
-  ActionIcon,
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
-import { IconCheck, IconTrash, IconPlayerTrackPrev } from "@tabler/icons-react";
+import { IconCheck, IconPlayerTrackPrev } from "@tabler/icons-react";
 import { TogyzBoard } from "@/components/board/TogyzBoard";
+import { MoveListPanel } from "@/components/board/MoveListPanel";
+import { BoardControls } from "@/components/board/BoardControls";
 import { type PitIndex, type BoardState } from "@/lib/engine/types";
 import { createInitialBoard, makeMove, getGameResult, boardToFen } from "@/lib/engine/TogyzEngine";
+import { generatePgn, toPgnMoves } from "@/lib/engine/pgn";
 import { saveGame } from "@/actions/games";
 import { useRouter } from "next/navigation";
 
@@ -27,6 +28,7 @@ interface RecordedMove {
   moveNumber: number;
   side: "white" | "black";
   pit: PitIndex;
+  notation: string;
 }
 
 export default function ManualPage() {
@@ -34,13 +36,43 @@ export default function ManualPage() {
   const [board, setBoard] = useState<BoardState>(createInitialBoard());
   const [history, setHistory] = useState<BoardState[]>([createInitialBoard()]);
   const [moves, setMoves] = useState<RecordedMove[]>([]);
+  const [viewStep, setViewStep] = useState(0); // 0 = initial, moves.length = latest
   const [whitePlayer, setWhitePlayer] = useState("");
   const [blackPlayer, setBlackPlayer] = useState("");
   const [tournament, setTournament] = useState("");
   const [gameResult, setGameResult] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Current board for viewing (can be historical)
+  const viewBoard = history[viewStep] || board;
+  const isLatest = viewStep === history.length - 1;
+
+  // PGN moves for display
+  const pgnMoves = useMemo(() => toPgnMoves(moves), [moves]);
+
+  // Current FEN
+  const currentFen = useMemo(() => boardToFen(viewBoard), [viewBoard]);
+
+  // Full PGN text
+  const pgnText = useMemo(
+    () =>
+      generatePgn(moves, {
+        white: whitePlayer || "Бастаушы",
+        black: blackPlayer || "Қостаушы",
+        event: tournament || undefined,
+        result: gameResult || undefined,
+      }),
+    [moves, whitePlayer, blackPlayer, tournament, gameResult]
+  );
+
   function handlePitClick(pit: number) {
+    // Only allow moves when viewing the latest position
+    if (!isLatest) {
+      // Jump to latest first
+      setViewStep(history.length - 1);
+      return;
+    }
+
     if (getGameResult(board) !== "ongoing") return;
 
     const result = makeMove(board, pit as PitIndex);
@@ -49,20 +81,18 @@ export default function ManualPage() {
       return;
     }
 
-    const moveNumber = result.boardAfter.side === "white"
-      ? board.moveNumber
-      : board.moveNumber;
-
     setMoves((prev) => [
       ...prev,
       {
         moveNumber: board.moveNumber,
         side: board.side,
         pit: pit as PitIndex,
+        notation: result.notation,
       },
     ]);
     setHistory((prev) => [...prev, result.boardAfter]);
     setBoard(result.boardAfter);
+    setViewStep(history.length); // Will be new length - 1 after state update
   }
 
   function handleUndo() {
@@ -71,7 +101,9 @@ export default function ManualPage() {
     const newMoves = moves.slice(0, -1);
     setHistory(newHistory);
     setMoves(newMoves);
-    setBoard(newHistory[newHistory.length - 1]);
+    const newBoard = newHistory[newHistory.length - 1];
+    setBoard(newBoard);
+    setViewStep(newHistory.length - 1);
   }
 
   function handleReset() {
@@ -79,15 +111,20 @@ export default function ManualPage() {
     setBoard(initial);
     setHistory([initial]);
     setMoves([]);
+    setViewStep(0);
+  }
+
+  function handleStepChange(step: number) {
+    setViewStep(Math.max(0, Math.min(step, history.length - 1)));
   }
 
   async function handleSave() {
     setSaving(true);
     const result = await saveGame({
-      whitePlayer: whitePlayer || "Белые",
-      blackPlayer: blackPlayer || "Чёрные",
+      whitePlayer: whitePlayer || "Бастаушы",
+      blackPlayer: blackPlayer || "Қостаушы",
       tournament: tournament || undefined,
-      result: gameResult || getGameResult(board) === "ongoing" ? "ongoing" : gameResult || "ongoing",
+      result: gameResult || (getGameResult(board) !== "ongoing" ? getGameResult(board) : "ongoing"),
       sourceType: "manual",
       moves: moves.map((m) => ({
         moveNumber: m.moveNumber,
@@ -114,70 +151,82 @@ export default function ManualPage() {
 
       <Grid>
         <Grid.Col span={{ base: 12, md: 7 }}>
-          <Paper p="md" withBorder>
-            <Stack>
-              <TogyzBoard
-                board={board}
-                onPitClick={handlePitClick}
-                interactive={result === "ongoing"}
-              />
+          <Stack>
+            <TogyzBoard
+              board={viewBoard}
+              onPitClick={handlePitClick}
+              interactive={result === "ongoing" && isLatest}
+            />
 
-              {result !== "ongoing" && (
-                <Badge size="lg" color={result === "draw" ? "gray" : result === "white" ? "blue" : "red"}>
-                  {result === "white" ? "Белые победили (1-0)" :
-                   result === "black" ? "Чёрные победили (0-1)" :
-                   "Ничья (½-½)"}
-                </Badge>
-              )}
+            <BoardControls
+              currentStep={viewStep}
+              totalSteps={history.length - 1}
+              onStepChange={handleStepChange}
+            />
 
-              <Group>
-                <Button
-                  variant="light"
-                  leftSection={<IconPlayerTrackPrev size={16} />}
-                  onClick={handleUndo}
-                  disabled={history.length <= 1}
-                >
-                  Отменить ход
-                </Button>
-                <Button variant="light" color="red" onClick={handleReset}>
-                  Сбросить
-                </Button>
-              </Group>
+            {result !== "ongoing" && (
+              <Badge size="lg" color={result === "draw" ? "gray" : result === "white" ? "blue" : "red"}>
+                {result === "white" ? "Бастаушы победил (1-0)" :
+                 result === "black" ? "Қостаушы победил (0-1)" :
+                 "Ничья (½-½)"}
+              </Badge>
+            )}
 
-              <Text size="sm" c="dimmed">
-                Нажмите на лунку (1-9) текущего игрока для хода.
-                Ход: {board.side === "white" ? "Белые" : "Чёрные"}
-              </Text>
-            </Stack>
-          </Paper>
+            <Group>
+              <Button
+                variant="light"
+                leftSection={<IconPlayerTrackPrev size={16} />}
+                onClick={handleUndo}
+                disabled={history.length <= 1}
+              >
+                Отменить ход
+              </Button>
+              <Button variant="light" color="red" onClick={handleReset}>
+                Сбросить
+              </Button>
+            </Group>
+          </Stack>
         </Grid.Col>
 
         <Grid.Col span={{ base: 12, md: 5 }}>
           <Stack>
+            {/* Move list + FEN + PGN */}
+            <MoveListPanel
+              moves={pgnMoves}
+              fen={currentFen}
+              pgn={pgnText}
+              currentStep={viewStep}
+              onStepChange={handleStepChange}
+            />
+
+            {/* Game metadata */}
             <Paper p="md" withBorder>
               <Stack>
                 <TextInput
-                  label="Белые (Бастаушы)"
+                  label="Бастаушы (Белые)"
                   value={whitePlayer}
                   onChange={(e) => setWhitePlayer(e.target.value)}
+                  placeholder="Имя игрока"
                 />
                 <TextInput
-                  label="Чёрные (Қостаушы)"
+                  label="Қостаушы (Чёрные)"
                   value={blackPlayer}
                   onChange={(e) => setBlackPlayer(e.target.value)}
+                  placeholder="Имя игрока"
                 />
                 <TextInput
                   label="Турнир"
                   value={tournament}
                   onChange={(e) => setTournament(e.target.value)}
+                  placeholder="Название турнира"
                 />
                 <Select
                   label="Результат"
                   value={gameResult}
                   onChange={setGameResult}
                   data={[
-                    { value: "1-0", label: "1-0 (Белые)" },
-                    { value: "0-1", label: "0-1 (Чёрные)" },
+                    { value: "1-0", label: "1-0 (Бастаушы)" },
+                    { value: "0-1", label: "0-1 (Қостаушы)" },
                     { value: "1/2-1/2", label: "½-½ (Ничья)" },
                   ]}
                   clearable
@@ -193,39 +242,9 @@ export default function ManualPage() {
               </Stack>
             </Paper>
 
-            <Paper p="md" withBorder>
-              <Text fw={600} size="sm" mb="xs">
-                Записанные ходы ({moves.length})
-              </Text>
-              <Table striped>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>#</Table.Th>
-                    <Table.Th>Белые</Table.Th>
-                    <Table.Th>Чёрные</Table.Th>
-                  </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {Array.from(
-                    new Set(moves.map((m) => m.moveNumber))
-                  ).map((num) => {
-                    const w = moves.find(
-                      (m) => m.moveNumber === num && m.side === "white"
-                    );
-                    const b = moves.find(
-                      (m) => m.moveNumber === num && m.side === "black"
-                    );
-                    return (
-                      <Table.Tr key={num}>
-                        <Table.Td>{num}</Table.Td>
-                        <Table.Td>{w?.pit || ""}</Table.Td>
-                        <Table.Td>{b?.pit || ""}</Table.Td>
-                      </Table.Tr>
-                    );
-                  })}
-                </Table.Tbody>
-              </Table>
-            </Paper>
+            <Text size="xs" c="dimmed">
+              Нажмите на лунку текущего игрока для хода. Используйте навигацию для просмотра позиций.
+            </Text>
           </Stack>
         </Grid.Col>
       </Grid>

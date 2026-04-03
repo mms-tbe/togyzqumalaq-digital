@@ -113,11 +113,14 @@ export function makeMove(board: BoardState, pit: PitIndex): MoveResult | null {
   }
 
   // Check even capture
+  let evenCaptured = 0;
   if (b.pits[current] !== TUZ_MARKER && b.pits[current] % 2 === 0) {
     if (color === 0 && current > 8) {
+      evenCaptured = b.pits[current];
       b.kazans[0] += b.pits[current];
       b.pits[current] = 0;
     } else if (color === 1 && current < 9) {
+      evenCaptured = b.pits[current];
       b.kazans[1] += b.pits[current];
       b.pits[current] = 0;
     }
@@ -130,18 +133,23 @@ export function makeMove(board: BoardState, pit: PitIndex): MoveResult | null {
   // Check position (empty side)
   checkPosition(b);
 
-  // Build notation
+  // Build notation (playstrategy format: "76(10)" or "77X")
   const landedPit =
     current > 8 ? current - 9 + 1 : current + 1;
   let notation = `${pit}${landedPit}`;
-  if (capturedTuz) notation += "x";
+  if (capturedTuz) {
+    notation += "X";
+  } else if (evenCaptured > 0) {
+    notation += `(${evenCaptured})`;
+  }
 
+  const totalCaptured = capturedTuz ? 3 : evenCaptured;
   const fen = boardToFen(b);
 
   return {
     from: pit,
     landedAt: current,
-    captured: capturedTuz ? 3 : 0,
+    captured: totalCaptured,
     tuzDeclared: capturedTuz,
     boardAfter: b,
     fen,
@@ -183,15 +191,31 @@ export function getGameResult(board: BoardState): GameResult {
   return "ongoing";
 }
 
+/**
+ * FEN in playstrategy format:
+ * [P2 pits 9→1]/[P1 pits 1→9] P1score P2score Turn MoveNum
+ * Each pit: "9S" or "t" for tuz. Example:
+ * 9S,9S,9S,9S,9S,9S,9S,9S,9S/9S,9S,9S,9S,9S,9S,9S,9S,9S 0 0 S 1
+ */
 export function boardToFen(board: BoardState): string {
-  const whitePits = board.pits
-    .slice(0, 9)
-    .map((v) => (v === TUZ_MARKER ? 0 : v))
-    .join(".");
-  const blackPits = board.pits
-    .slice(9, 18)
-    .map((v) => (v === TUZ_MARKER ? 0 : v))
-    .join(".");
+  // P2 pits: indices 17→9 (pit 9 to pit 1, displayed left to right on top)
+  const p2Pits = [];
+  for (let i = 17; i >= 9; i--) {
+    p2Pits.push(board.pits[i] === TUZ_MARKER ? "t" : `${board.pits[i]}S`);
+  }
+  // P1 pits: indices 0→8 (pit 1 to pit 9, displayed left to right on bottom)
+  const p1Pits = [];
+  for (let i = 0; i <= 8; i++) {
+    p1Pits.push(board.pits[i] === TUZ_MARKER ? "t" : `${board.pits[i]}S`);
+  }
+  const side = board.side === "white" ? "S" : "N";
+  return `${p2Pits.join(",")}/${p1Pits.join(",")} ${board.kazans[0]} ${board.kazans[1]} ${side} ${board.moveNumber}`;
+}
+
+/** Simple FEN for internal storage (backward compat) */
+export function boardToSimpleFen(board: BoardState): string {
+  const whitePits = board.pits.slice(0, 9).map((v) => (v === TUZ_MARKER ? 0 : v)).join(".");
+  const blackPits = board.pits.slice(9, 18).map((v) => (v === TUZ_MARKER ? 0 : v)).join(".");
   const side = board.side === "white" ? "w" : "b";
   return `${whitePits}/${board.kazans[0]}/${blackPits}/${board.kazans[1]} ${side} ${board.moveNumber}`;
 }

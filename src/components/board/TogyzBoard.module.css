@@ -1,17 +1,18 @@
 .wrapper {
-  max-width: 700px;
+  max-width: 720px;
   margin: 0 auto;
   font-family: system-ui, -apple-system, sans-serif;
 }
 
 /* ── Board ── */
 .board {
-  background: linear-gradient(135deg, #5ecece 0%, #42b8b8 50%, #3aacac 100%);
-  border-radius: 8px;
-  padding: 4px 8px;
+  background: linear-gradient(180deg, #72dde0 0%, #66d5d8 40%, #5ccfd2 100%);
+  border-radius: 6px;
+  padding: 2px 6px;
   box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  border: 2px solid #4abfc3;
 }
 
 /* ── Pit numbers ── */
@@ -19,37 +20,38 @@
   display: grid;
   grid-template-columns: repeat(9, 1fr);
   text-align: center;
-  padding: 2px 0;
+  padding: 1px 0;
 }
 
 .pitNumber {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1a6b6b;
+  font-size: 12px;
+  font-weight: 700;
+  color: #2a8a8e;
 }
 
 /* ── Pits row ── */
 .pitsRow {
   display: grid;
   grid-template-columns: repeat(9, 1fr);
-  gap: 4px;
-  padding: 2px 0;
+  gap: 3px;
+  padding: 1px 0;
 }
 
 /* ── Single pit ── */
 .pit {
-  background: linear-gradient(180deg, #3a9e9e 0%, #4ab8b8 30%, #5ecece 100%);
-  border-radius: 6px;
-  min-height: 80px;
-  padding: 6px 4px;
+  background: linear-gradient(180deg, #4dbfc3 0%, #5cccd0 25%, #6ad8dc 100%);
+  border-radius: 4px;
+  min-height: 85px;
+  padding: 6px 3px;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow:
-    inset 0 3px 8px rgba(0, 0, 0, 0.35),
-    inset 0 -1px 2px rgba(255, 255, 255, 0.2);
-  transition: all 0.15s ease;
+    inset 2px 3px 8px rgba(0, 0, 0, 0.3),
+    inset -1px -1px 3px rgba(255, 255, 255, 0.15);
+  transition: all 0.12s ease;
   position: relative;
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .pit.clickable {
@@ -57,71 +59,69 @@
 }
 
 .pit.clickable:hover {
-  background: linear-gradient(180deg, #4ab8b8 0%, #5ecece 30%, #72dada 100%);
+  background: linear-gradient(180deg, #5cccd0 0%, #6ee0e4 25%, #80eaed 100%);
   box-shadow:
-    inset 0 3px 8px rgba(0, 0, 0, 0.2),
-    inset 0 -1px 2px rgba(255, 255, 255, 0.3),
-    0 0 12px rgba(255, 165, 0, 0.4);
+    inset 1px 2px 5px rgba(0, 0, 0, 0.15),
+    0 0 14px rgba(255, 180, 0, 0.45);
 }
 
 .tuzPit {
-  background: linear-gradient(180deg, #c0392b 0%, #e74c3c 50%, #c0392b 100%) !important;
+  background: linear-gradient(180deg, #b83a2f 0%, #d94838 50%, #b83a2f 100%) !important;
   box-shadow:
-    inset 0 3px 8px rgba(0, 0, 0, 0.4),
-    0 0 8px rgba(231, 76, 60, 0.5) !important;
+    inset 2px 3px 8px rgba(0, 0, 0, 0.4),
+    0 0 10px rgba(217, 72, 56, 0.5) !important;
 }
 
 .tuzMarker {
   position: absolute;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   color: #fff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  letter-spacing: 2px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  letter-spacing: 3px;
 }
 
 /* ── Stones inside pit ── */
 .stonesGrid {
   display: grid;
-  gap: 3px;
+  gap: 2px;
   justify-items: center;
   align-items: center;
 }
 
 .stone {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #666 0%, #333 40%, #111 100%);
+  background: radial-gradient(circle at 38% 32%, #6a6a6a 0%, #3d3d3d 35%, #1a1a1a 100%);
   box-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.5),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.3),
-    inset 0 1px 2px rgba(255, 255, 255, 0.15);
+    1px 2px 3px rgba(0, 0, 0, 0.55),
+    inset 0 1px 1px rgba(255, 255, 255, 0.12);
 }
 
 /* ── Count badges between rows ── */
 .badgesRow {
   display: grid;
   grid-template-columns: repeat(9, 1fr);
-  gap: 4px;
-  padding: 3px 0;
+  gap: 3px;
+  padding: 2px 0;
   justify-items: center;
 }
 
 .countBadge {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, #444 0%, #1a1a1a 100%);
+  background: radial-gradient(circle at 42% 38%, #3a3a3a 0%, #111 100%);
   color: #fff;
   font-size: 13px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.45);
   user-select: none;
-  transition: transform 0.15s ease;
+  transition: transform 0.12s ease, background 0.12s ease;
 }
 
 .activeBadge {
@@ -129,37 +129,28 @@
 }
 
 .activeBadge:hover {
-  transform: scale(1.15);
-  background: radial-gradient(circle at 40% 35%, #f0a020 0%, #d48800 100%);
+  transform: scale(1.18);
+  background: radial-gradient(circle at 42% 38%, #ee9a20 0%, #cc7700 100%);
 }
 
 .tuzBadge {
-  background: radial-gradient(circle at 40% 35%, #e74c3c 0%, #a93226 100%);
+  background: radial-gradient(circle at 42% 38%, #d94838 0%, #9a2a1e 100%);
 }
 
 .divider {
-  height: 2px;
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 20%, rgba(255, 255, 255, 0.4) 80%, transparent 100%);
-  margin: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 2%, rgba(255, 255, 255, 0.35) 15%, rgba(255, 255, 255, 0.35) 85%, transparent 98%);
 }
 
 /* ── Kazan score bar ── */
 .kazanBar {
   position: relative;
-  height: 32px;
-  background: #ddd;
-  border-radius: 6px;
-  margin: 6px 0;
+  height: 34px;
+  background: #e0e0e0;
+  border-radius: 5px;
+  margin: 5px 0;
   overflow: hidden;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
-}
-
-.kazanTop .kazanFill {
-  background: linear-gradient(90deg, #42b8b8, #5ecece);
-}
-
-.kazanBottom .kazanFill {
-  background: linear-gradient(90deg, #42b8b8, #5ecece);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 
 .kazanFill {
@@ -167,8 +158,9 @@
   top: 0;
   left: 0;
   height: 100%;
-  transition: width 0.4s ease;
-  border-radius: 6px;
+  background: linear-gradient(90deg, #5bbfc3, #72dde0);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 5px;
 }
 
 .kazanScore {
@@ -176,21 +168,21 @@
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  background: #e67e22;
+  background: #e67322;
   color: #fff;
   font-size: 14px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 10px;
-  min-width: 28px;
+  font-weight: 800;
+  padding: 2px 10px;
+  border-radius: 12px;
+  min-width: 30px;
   text-align: center;
   z-index: 1;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .kazanLabel {
   position: absolute;
-  left: 10px;
+  left: 12px;
   top: 50%;
   transform: translateY(-50%);
   font-size: 13px;
@@ -206,7 +198,7 @@
   color: #555;
   padding: 2px 4px;
   border-bottom: 1px solid #ddd;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
 /* ── Turn indicator ── */
@@ -214,29 +206,121 @@
   text-align: center;
   font-size: 13px;
   color: #666;
-  margin-top: 8px;
-  padding: 4px 0;
+  margin-top: 6px;
+}
+
+/* ── FEN / PGN area ── */
+.fenArea {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fenLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: #888;
+  min-width: 35px;
+}
+
+.fenValue {
+  flex: 1;
+  font-size: 12px;
+  font-family: 'Source Code Pro', 'Menlo', monospace;
+  color: #333;
+  background: #f5f5f5;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  word-break: break-all;
+}
+
+.pgnArea {
+  margin-top: 6px;
+}
+
+.pgnValue {
+  font-size: 12px;
+  font-family: 'Source Code Pro', 'Menlo', monospace;
+  color: #333;
+  background: #f5f5f5;
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  min-height: 60px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ── Move list (playstrategy style) ── */
+.moveList {
+  max-height: 350px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.moveRow {
+  display: grid;
+  grid-template-columns: 32px 1fr 1fr;
+  font-size: 13px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.moveRow:hover {
+  background: #f0f5ff;
+}
+
+.moveRowActive {
+  background: #e8eeff !important;
+}
+
+.moveNum {
+  padding: 4px 6px;
+  color: #999;
+  text-align: right;
+  font-size: 12px;
+  border-right: 1px solid #f0f0f0;
+}
+
+.moveCell {
+  padding: 4px 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.moveCellActive {
+  background: #d8e4ff;
+  font-weight: 700;
 }
 
 /* ── Responsive ── */
-@media (max-width: 600px) {
+@media (max-width: 640px) {
   .pit {
-    min-height: 55px;
+    min-height: 58px;
     padding: 4px 2px;
   }
 
   .stone {
-    width: 11px;
-    height: 11px;
+    width: 10px;
+    height: 10px;
   }
 
   .countBadge {
-    width: 22px;
-    height: 22px;
-    font-size: 11px;
+    width: 23px;
+    height: 23px;
+    font-size: 10px;
   }
 
   .pitNumber {
-    font-size: 11px;
+    font-size: 10px;
+  }
+
+  .moveRow {
+    font-size: 12px;
   }
 }
