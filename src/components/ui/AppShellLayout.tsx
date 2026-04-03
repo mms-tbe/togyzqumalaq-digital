@@ -29,26 +29,27 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShell
-      header={{ height: 60 }}
-      navbar={{ width: 260, breakpoint: "sm", collapsed: { mobile: !opened } }}
+      header={{ height: 80 }}
+      navbar={{ width: 280, breakpoint: "sm", collapsed: { mobile: !opened } }}
       padding="md"
     >
       <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between">
-          <Group>
+        <Group h="100%" px="lg" justify="space-between">
+          <Group gap="md">
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Image src="/logo.png" alt="Togyzqumalaq" width={72} height={72} />
-            <Title order={3} size="h4">
+            <Image src="/logo.png" alt="Togyzqumalaq" width={56} height={56} />
+            <Title order={2} style={{ fontSize: 22, letterSpacing: -0.3 }}>
               Togyzqumalaq Digital
             </Title>
           </Group>
-          <Group>
+          <Group gap="sm">
             <ActionIcon
               variant="default"
-              size="lg"
+              size="xl"
+              radius="md"
               onClick={() => toggleColorScheme()}
             >
-              {colorScheme === "dark" ? <IconSun size={18} /> : <IconMoon size={18} />}
+              {colorScheme === "dark" ? <IconSun size={22} /> : <IconMoon size={22} />}
             </ActionIcon>
             <UserMenu />
           </Group>
@@ -60,13 +61,14 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
           <NavLink
             key={item.href}
             label={item.label}
-            leftSection={<item.icon size={20} />}
+            leftSection={<item.icon size={22} />}
             active={pathname === item.href}
             onClick={() => {
               router.push(item.href);
               toggle();
             }}
-            mb={4}
+            mb={6}
+            style={{ fontSize: 15 }}
           />
         ))}
       </AppShell.Navbar>
