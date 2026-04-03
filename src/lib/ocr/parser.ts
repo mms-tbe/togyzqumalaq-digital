@@ -2,8 +2,10 @@ import { type PitIndex } from "@/lib/engine/types";
 
 export interface OcrMove {
   n: number;
-  w: number | null;
-  b: number | null;
+  /** White move notation: "76", "52X", or "" if empty */
+  w: string;
+  /** Black move notation: "76", "52X", or "" if empty */
+  b: string;
 }
 
 export interface OcrResult {
@@ -58,8 +60,8 @@ function tryParseJson(raw: string): OcrResult | null {
       result: parsed.result ?? null,
       moves: moves.map((m: Record<string, unknown>) => ({
         n: Number(m.n) || 0,
-        w: validPit(m.w),
-        b: validPit(m.b),
+        w: String(m.w ?? ""),
+        b: String(m.b ?? ""),
       })),
     };
   } catch {
@@ -104,15 +106,10 @@ function parseMarkdownTable(raw: string): OcrResult | null {
 
     if (moveNum < 1 || moveNum > 100) continue;
 
-    // For two-digit values like "43": first digit = pit (4), second = landing
-    // For single digit "4": pit = 4
-    const wPit = extractPitFromNotation(whiteVal);
-    const bPit = extractPitFromNotation(blackVal);
-
-    // Check if this move number already exists (multiple tables on sheet)
+    // Keep the raw two-digit value as notation (e.g. "43", "91")
     const existing = moves.find((m) => m.n === moveNum);
     if (!existing) {
-      moves.push({ n: moveNum, w: wPit, b: bPit });
+      moves.push({ n: moveNum, w: whiteVal.trim(), b: blackVal.trim() });
     }
   }
 
@@ -121,10 +118,8 @@ function parseMarkdownTable(raw: string): OcrResult | null {
     const lineRegex = /^\s*(\d+)[\.\)]\s+(\d+)\s+(\d+)/gm;
     while ((match = lineRegex.exec(raw)) !== null) {
       const moveNum = parseInt(match[1]);
-      const wPit = extractPitFromNotation(match[2]);
-      const bPit = extractPitFromNotation(match[3]);
       if (moveNum >= 1 && moveNum <= 100) {
-        moves.push({ n: moveNum, w: wPit, b: bPit });
+        moves.push({ n: moveNum, w: match[2].trim(), b: match[3].trim() });
       }
     }
   }
@@ -173,8 +168,10 @@ export function ocrMovesToParsed(ocrMoves: OcrMove[]) {
 export function extractPitSequence(moves: OcrMove[]): (PitIndex | null)[] {
   const result: (PitIndex | null)[] = [];
   for (const m of moves) {
-    result.push(m.w as PitIndex | null);
-    result.push(m.b as PitIndex | null);
+    const wp = m.w ? parseInt(m.w[0]) : null;
+    const bp = m.b ? parseInt(m.b[0]) : null;
+    result.push(wp && wp >= 1 && wp <= 9 ? (wp as PitIndex) : null);
+    result.push(bp && bp >= 1 && bp <= 9 ? (bp as PitIndex) : null);
   }
   return result;
 }

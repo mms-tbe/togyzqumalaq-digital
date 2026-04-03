@@ -12,7 +12,6 @@ import {
   Progress,
   Button,
   Table,
-  NumberInput,
   TextInput,
   Select,
   Alert,
@@ -83,12 +82,19 @@ export default function UploadPage() {
   const [tournament, setTournament] = useState("");
   const [gameResult, setGameResult] = useState<string | null>(null);
 
-  // Editable moves — default 80 empty rows
-  const defaultMoves: OcrMove[] = Array.from({ length: 80 }, (_, i) => ({ n: i + 1, w: null, b: null }));
+  // Editable moves — fixed 80 rows, notation strings
+  const defaultMoves: OcrMove[] = Array.from({ length: 80 }, (_, i) => ({ n: i + 1, w: "", b: "" }));
   const [editableMoves, setEditableMoves] = useState<OcrMove[]>(defaultMoves);
   const [validationErrors, setValidationErrors] = useState<Map<number, string>>(new Map());
 
-  // Board replay from validated moves — also computes notation per row
+  /** Extract starting pit (1-9) from notation string like "76", "52X" */
+  function pitFromNotation(notation: string): PitIndex | null {
+    if (!notation) return null;
+    const d = parseInt(notation[0]);
+    return d >= 1 && d <= 9 ? (d as PitIndex) : null;
+  }
+
+  // Board replay from validated moves
   const replayData = useMemo(() => {
     const boards = [createInitialBoard()];
     const notations: { notation: string; side: "white" | "black" }[] = [];
@@ -98,8 +104,9 @@ export default function UploadPage() {
     for (const move of editableMoves) {
       let wNot = "";
       let bNot = "";
-      if (move.w !== null) {
-        const result = makeMove(board, move.w as PitIndex);
+      const wPit = pitFromNotation(move.w);
+      if (wPit) {
+        const result = makeMove(board, wPit);
         if (result) {
           board = result.boardAfter;
           boards.push(board);
@@ -108,8 +115,9 @@ export default function UploadPage() {
           if (getGameResult(board) !== "ongoing") { rowNotations.push({ wNotation: wNot, bNotation: bNot }); break; }
         }
       }
-      if (move.b !== null) {
-        const result = makeMove(board, move.b as PitIndex);
+      const bPit = pitFromNotation(move.b);
+      if (bPit) {
+        const result = makeMove(board, bPit);
         if (result) {
           board = result.boardAfter;
           boards.push(board);
@@ -139,23 +147,31 @@ export default function UploadPage() {
 
     for (let i = 0; i < moves.length; i++) {
       const move = moves[i];
-      if (move.w !== null) {
-        const result = makeMove(board, move.w as PitIndex);
+      const wPit = pitFromNotation(move.w);
+      if (wPit) {
+        const result = makeMove(board, wPit);
         if (!result) {
-          errors.set(i * 2, `Ход белых ${move.w} невалиден`);
+          errors.set(i * 2, `Ход ${move.w} невалиден`);
           break;
         }
         board = result.boardAfter;
         if (getGameResult(board) !== "ongoing") break;
+      } else if (move.w && !wPit) {
+        errors.set(i * 2, `Неверный формат: ${move.w}`);
+        break;
       }
-      if (move.b !== null) {
-        const result = makeMove(board, move.b as PitIndex);
+      const bPit = pitFromNotation(move.b);
+      if (bPit) {
+        const result = makeMove(board, bPit);
         if (!result) {
-          errors.set(i * 2 + 1, `Ход чёрных ${move.b} невалиден`);
+          errors.set(i * 2 + 1, `Ход ${move.b} невалиден`);
           break;
         }
         board = result.boardAfter;
         if (getGameResult(board) !== "ongoing") break;
+      } else if (move.b && !bPit) {
+        errors.set(i * 2 + 1, `Неверный формат: ${move.b}`);
+        break;
       }
     }
 
@@ -192,13 +208,12 @@ export default function UploadPage() {
       }
 
       setOcrResult(parsed);
-      // Fill up to 80 rows
-      const ocrMoves = parsed.moves;
-      const padded = [...ocrMoves];
-      for (let i = ocrMoves.length; i < 80; i++) {
-        padded.push({ n: i + 1, w: null, b: null });
-      }
-      setEditableMoves(padded);
+      // Fill OCR data into fixed 80-row grid (never change numbering)
+      const grid: OcrMove[] = Array.from({ length: 80 }, (_, i) => {
+        const ocr = parsed.moves.find((m) => m.n === i + 1);
+        return { n: i + 1, w: ocr?.w || "", b: ocr?.b || "" };
+      });
+      setEditableMoves(grid);
       setWhitePlayer(parsed.white_player || "");
       setBlackPlayer(parsed.black_player || "");
       setTournament(parsed.tournament || "");
@@ -213,7 +228,7 @@ export default function UploadPage() {
     }
   }
 
-  function updateMove(index: number, field: "w" | "b", value: number | null) {
+  function updateMove(index: number, field: "w" | "b", value: string) {
     const updated = [...editableMoves];
     updated[index] = { ...updated[index], [field]: value };
     setEditableMoves(updated);
@@ -222,13 +237,12 @@ export default function UploadPage() {
   }
 
   function addMoveRow() {
-    const nextN = editableMoves.length > 0 ? editableMoves[editableMoves.length - 1].n + 1 : 1;
-    setEditableMoves([...editableMoves, { n: nextN, w: null, b: null }]);
+    const nextN = editableMoves.length + 1;
+    setEditableMoves([...editableMoves, { n: nextN, w: "", b: "" }]);
   }
 
   function deleteMoveRow(index: number) {
     const updated = editableMoves.filter((_, i) => i !== index);
-    // Renumber
     const renumbered = updated.map((m, i) => ({ ...m, n: i + 1 }));
     setEditableMoves(renumbered);
     validateMoves(renumbered);
@@ -239,24 +253,13 @@ export default function UploadPage() {
   function handleSave() {
     setSaving(true);
 
-    // Replay moves through engine to generate notation
+    // Build moves from engine-computed notations (replayData has the correct notations)
     const movesWithNotation: { moveNumber: number; side: "white" | "black"; notation: string }[] = [];
-    let replayBoard = createInitialBoard();
-    for (const move of editableMoves) {
-      if (move.w !== null) {
-        const r = makeMove(replayBoard, move.w as PitIndex);
-        if (r) {
-          movesWithNotation.push({ moveNumber: move.n, side: "white", notation: r.notation });
-          replayBoard = r.boardAfter;
-        }
-      }
-      if (move.b !== null) {
-        const r = makeMove(replayBoard, move.b as PitIndex);
-        if (r) {
-          movesWithNotation.push({ moveNumber: move.n, side: "black", notation: r.notation });
-          replayBoard = r.boardAfter;
-        }
-      }
+    for (const n of replayData.notations) {
+      const moveNum = n.side === "white"
+        ? Math.floor(movesWithNotation.filter(m => m.side === "white").length) + 1
+        : movesWithNotation.filter(m => m.side === "white").length;
+      movesWithNotation.push({ moveNumber: moveNum, side: n.side, notation: n.notation });
     }
 
     try {
@@ -375,43 +378,41 @@ export default function UploadPage() {
                           const rn = replayData.rowNotations[idx];
                           const wError = validationErrors.has(idx * 2);
                           const bError = validationErrors.has(idx * 2 + 1);
-                          const isEmpty = move.w === null && move.b === null;
-                          const hasError = (move.w !== null && wError) || (move.b !== null && bError);
-                          const rowOk = !isEmpty && !hasError && (move.w !== null || move.b !== null);
+                          const isEmpty = !move.w && !move.b;
+                          const hasError = (move.w && wError) || (move.b && bError);
+                          const rowOk = !isEmpty && !hasError;
                           return (
                           <Table.Tr key={idx}>
                             <Table.Td>{move.n}</Table.Td>
                             <Table.Td>
-                              <Group gap={6} wrap="nowrap">
-                                <NumberInput
-                                  value={move.w ?? undefined}
-                                  onChange={(val) => updateMove(idx, "w", typeof val === "number" ? val : null)}
-                                  min={1} max={9} size="xs" w={50}
-                                  error={wError && move.w !== null}
+                              <Group gap={4} wrap="nowrap">
+                                <TextInput
+                                  value={move.w}
+                                  onChange={(e) => updateMove(idx, "w", e.target.value.toUpperCase().slice(0, 3))}
+                                  size="xs" w={55}
+                                  error={!!(move.w && wError)}
                                   placeholder="—"
-                                  hideControls
+                                  maxLength={3}
+                                  styles={{ input: { textAlign: "center", fontWeight: 700, fontFamily: "monospace" } }}
                                 />
-                                {rn?.wNotation && (
-                                  <Text size="xs" fw={600} c={wError ? "red" : "teal"}>
-                                    {rn.wNotation}
-                                  </Text>
+                                {rn?.wNotation && rn.wNotation !== move.w && (
+                                  <Text size="xs" c="teal">{rn.wNotation}</Text>
                                 )}
                               </Group>
                             </Table.Td>
                             <Table.Td>
-                              <Group gap={6} wrap="nowrap">
-                                <NumberInput
-                                  value={move.b ?? undefined}
-                                  onChange={(val) => updateMove(idx, "b", typeof val === "number" ? val : null)}
-                                  min={1} max={9} size="xs" w={50}
-                                  error={bError && move.b !== null}
+                              <Group gap={4} wrap="nowrap">
+                                <TextInput
+                                  value={move.b}
+                                  onChange={(e) => updateMove(idx, "b", e.target.value.toUpperCase().slice(0, 3))}
+                                  size="xs" w={55}
+                                  error={!!(move.b && bError)}
                                   placeholder="—"
-                                  hideControls
+                                  maxLength={3}
+                                  styles={{ input: { textAlign: "center", fontWeight: 700, fontFamily: "monospace" } }}
                                 />
-                                {rn?.bNotation && (
-                                  <Text size="xs" fw={600} c={bError ? "red" : "teal"}>
-                                    {rn.bNotation}
-                                  </Text>
+                                {rn?.bNotation && rn.bNotation !== move.b && (
+                                  <Text size="xs" c="teal">{rn.bNotation}</Text>
                                 )}
                               </Group>
                             </Table.Td>
