@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getServerDb } from "@/lib/supabase/db";
 import { getPgPool } from "@/lib/db/pool";
 import * as gamesRepo from "@/lib/db/gamesRepo";
 import { logDbError } from "@/lib/logger";
@@ -12,8 +13,8 @@ import type { GameSummary, StoredGame, SaveGameInput } from "@/lib/games/types";
 export type { SaveGameInput } from "@/lib/games/types";
 
 export async function saveGame(input: SaveGameInput) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const auth = await createClient();
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) return { error: "Не авторизован" };
 
   let board = createInitialBoard();
@@ -49,7 +50,9 @@ export async function saveGame(input: SaveGameInput) {
     }
   }
 
-  await supabase.from("profiles").upsert(
+  const db = await getServerDb();
+
+  await db.from("profiles").upsert(
     { id: user.id, display_name: user.email || "" },
     { onConflict: "id", ignoreDuplicates: true }
   );
@@ -59,7 +62,7 @@ export async function saveGame(input: SaveGameInput) {
   else if (input.result === "0-1") gameResult = "black";
   else if (input.result === "1/2-1/2" || input.result === "½-½") gameResult = "draw";
 
-  const { data: game, error: gameError } = await supabase
+  const { data: game, error: gameError } = await db
     .from("games")
     .insert({
       white_player_id: user.id,
@@ -82,7 +85,7 @@ export async function saveGame(input: SaveGameInput) {
   }
 
   if (movesWithFen.length > 0) {
-    const { error: movesError } = await supabase.from("moves").insert(
+    const { error: movesError } = await db.from("moves").insert(
       movesWithFen.map((m) => ({
         game_id: game.id,
         move_number: m.moveNumber,
@@ -102,8 +105,8 @@ export async function saveGame(input: SaveGameInput) {
 }
 
 export async function getGames(): Promise<{ games: GameSummary[] } | { error: string; games: [] }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const auth = await createClient();
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) return { error: "Не авторизован", games: [] };
 
   const pool = getPgPool();
@@ -130,7 +133,9 @@ export async function getGames(): Promise<{ games: GameSummary[] } | { error: st
     }
   }
 
-  const first = await supabase
+  const db = await getServerDb();
+
+  const first = await db
     .from("games")
     .select(`
       id,
@@ -147,7 +152,7 @@ export async function getGames(): Promise<{ games: GameSummary[] } | { error: st
   let rows = first.data;
   if (first.error) {
     logDbError("games.list", first.error);
-    const fallback = await supabase
+    const fallback = await db
       .from("games")
       .select("*")
       .eq("created_by", user.id)
@@ -167,8 +172,8 @@ export async function getGames(): Promise<{ games: GameSummary[] } | { error: st
 }
 
 export async function getGameById(id: string): Promise<{ game: StoredGame } | { error: string }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const auth = await createClient();
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) return { error: "Не авторизован" };
 
   const pool = getPgPool();
@@ -190,7 +195,9 @@ export async function getGameById(id: string): Promise<{ game: StoredGame } | { 
     }
   }
 
-  const { data: game, error: gameError } = await supabase
+  const db = await getServerDb();
+
+  const { data: game, error: gameError } = await db
     .from("games")
     .select("*")
     .eq("id", id)
@@ -205,7 +212,7 @@ export async function getGameById(id: string): Promise<{ game: StoredGame } | { 
     return { error: "Партия не найдена" };
   }
 
-  const { data: moves, error: movesError } = await supabase
+  const { data: moves, error: movesError } = await db
     .from("moves")
     .select("move_number, side, from_pit")
     .eq("game_id", id);
@@ -219,8 +226,8 @@ export async function getGameById(id: string): Promise<{ game: StoredGame } | { 
 }
 
 export async function deleteGame(id: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const auth = await createClient();
+  const { data: { user } } = await auth.auth.getUser();
   if (!user) return { error: "Не авторизован" };
 
   const pool = getPgPool();
@@ -236,7 +243,9 @@ export async function deleteGame(id: string) {
     }
   }
 
-  const { error } = await supabase
+  const db = await getServerDb();
+
+  const { error } = await db
     .from("games")
     .delete()
     .eq("id", id)
