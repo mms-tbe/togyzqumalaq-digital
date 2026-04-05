@@ -126,13 +126,29 @@ function parseMarkdownTable(raw: string): OcrResult | null {
     }
   }
 
-  // If no table rows found, try line-based parsing: "1. 78 16" or "1  78  16"
+  // Fallback 1: line-based "1. 78 16" or "1  78  16"
   if (moves.length === 0) {
     const lineRegex = /^\s*(\d+)[\.\)]\s+(\d+)\s+(\d+)/gm;
     while ((match = lineRegex.exec(raw)) !== null) {
       const moveNum = parseInt(match[1]);
       if (moveNum >= 1 && moveNum <= 200) {
         moves.push({ n: moveNum, w: match[2].trim(), b: match[3].trim() });
+      }
+    }
+  }
+
+  // Fallback 2: any row of 3+ numbers separated by spaces/tabs
+  if (moves.length === 0) {
+    const numRowRegex = /(\d{1,3})\s+(\d{1,3})\s+(\d{1,3})/g;
+    let seqNum = 1;
+    while ((match = numRowRegex.exec(raw)) !== null) {
+      const a = parseInt(match[1]);
+      const b = parseInt(match[2]);
+      const c = parseInt(match[3]);
+      // First number is move number if it matches sequence
+      if (a === seqNum && b >= 1 && b <= 99 && c >= 1 && c <= 99) {
+        moves.push({ n: a, w: match[2], b: match[3] });
+        seqNum++;
       }
     }
   }

@@ -200,9 +200,16 @@ export default function UploadPage() {
         return;
       }
 
-      const parsed = parseOcrResponse(result.content!);
+      const rawContent = result.content || "";
+      if (!rawContent) {
+        setOcrError("OCR вернул пустой ответ. Попробуйте другое фото.");
+        setProcessing(false);
+        return;
+      }
+
+      const parsed = parseOcrResponse(rawContent);
       if (!parsed) {
-        setOcrError("Не удалось распарсить ответ OCR. Raw: " + result.content!.slice(0, 500));
+        setOcrError("Не удалось найти таблицу ходов. Ответ OCR:\n" + rawContent.slice(0, 400));
         setProcessing(false);
         return;
       }
