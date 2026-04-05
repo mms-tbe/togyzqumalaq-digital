@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:apply-schema": "node scripts/apply-pg-schema.cjs"
   },
   "dependencies": {
     "@mantine/core": "^9.0.0",

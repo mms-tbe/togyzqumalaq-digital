@@ -9,6 +9,8 @@ let pool: Pool | null = null;
  *
  * SSL: если сервер без TLS и ошибка «does not support SSL», не используй `sslmode=require` в URI;
  * при необходимости добавь `?sslmode=disable`.
+ * Схема: при «relation public.profiles does not exist» выполни `npm run db:apply-schema`
+ * (файл `supabase/pg_direct_minimal.sql`).
  */
 export function getPgPool(): Pool | null {
   const url = process.env.DATABASE_URL?.trim();
