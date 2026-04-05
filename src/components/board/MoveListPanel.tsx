@@ -21,7 +21,7 @@ export function MoveListPanel({ moves, fen, pgn, currentStep, onStepChange }: Mo
           const blackStep = idx * 2 + 2;
           return (
             <div
-              key={`${idx}-${m.moveNumber}`}
+              key={`pgn-row-${idx}`}
               className={`${styles.moveRow} ${currentStep === whiteStep || currentStep === blackStep ? styles.moveRowActive : ""}`}
             >
               <div className={styles.moveNum}>{m.moveNumber}</div>

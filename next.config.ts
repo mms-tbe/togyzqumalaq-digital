@@ -10,6 +10,10 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  /** Quieter dev terminal: skip logging every server action payload */
+  logging: {
+    serverFunctions: false,
+  },
   experimental: {
     optimizePackageImports: ["@mantine/core", "@mantine/hooks", "@tabler/icons-react"],
   },

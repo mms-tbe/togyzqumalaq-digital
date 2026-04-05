@@ -71,7 +71,7 @@ export function TogyzBoard({ board, onPitClick, interactive }: TogyzBoardProps) 
         {/* Pit numbers top (black: 9 to 1) */}
         <div className={styles.pitNumbers}>
           {Array.from({ length: 9 }, (_, i) => 9 - i).map((n) => (
-            <span key={n} className={styles.pitNumber}>{n}</span>
+            <span key={`pitnum-top-${n}`} className={styles.pitNumber}>{n}</span>
           ))}
         </div>
 
@@ -143,7 +143,7 @@ export function TogyzBoard({ board, onPitClick, interactive }: TogyzBoardProps) 
         {/* Pit numbers bottom (white: 1 to 9) */}
         <div className={styles.pitNumbers}>
           {Array.from({ length: 9 }, (_, i) => i + 1).map((n) => (
-            <span key={n} className={styles.pitNumber}>{n}</span>
+            <span key={`pitnum-bottom-${n}`} className={styles.pitNumber}>{n}</span>
           ))}
         </div>
       </div>

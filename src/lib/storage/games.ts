@@ -1,12 +1,9 @@
 /**
- * Game storage with Supabase fallback to localStorage.
+ * Локальное хранение партий (localStorage) для офлайн / без БД.
  *
- * Supabase dedicated instance has broken PostgREST roles:
- * - anon JWT → "permission denied to set role anon"
- * - user JWT → "role '' does not exist"
- *
- * Auth (GoTrue) works, but DB (PostgREST) doesn't.
- * So: Auth via Supabase, game data via localStorage.
+ * Если PostgREST отдаёт JWT с пустым `role` и падает с `role "" does not exist`,
+ * на сервере задайте `SUPABASE_SERVICE_ROLE_KEY` и используйте `src/actions/games.ts`
+ * (`getServerDb()`), а не anon-клиент без сессии.
  */
 
 export interface StoredGame {

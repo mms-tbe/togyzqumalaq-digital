@@ -1,6 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getServerDb } from "@/lib/supabase/db";
+import { logDbError } from "@/lib/logger";
 import { redirect } from "next/navigation";
 
 export async function signUp(formData: FormData) {
@@ -23,7 +25,8 @@ export async function signUp(formData: FormData) {
 
   // Create profile manually (no DB trigger on auth.users in this instance)
   if (data.user) {
-    await supabase.from("profiles").upsert({
+    const db = await getServerDb();
+    await db.from("profiles").upsert({
       id: data.user.id,
       display_name: displayName || email,
     });
@@ -48,7 +51,8 @@ export async function signIn(formData: FormData) {
 
   // Ensure profile exists
   if (data.user) {
-    await supabase.from("profiles").upsert(
+    const db = await getServerDb();
+    await db.from("profiles").upsert(
       { id: data.user.id, display_name: data.user.email || "" },
       { onConflict: "id", ignoreDuplicates: true }
     );
@@ -74,12 +78,15 @@ export async function getProfile() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data } = await supabase
+  const db = await getServerDb();
+
+  const { data, error } = await db
     .from("profiles")
     .select("*")
     .eq("id", user.id)
     .single();
 
+  if (error) logDbError("profile.get", error);
   return data;
 }
 
@@ -88,7 +95,9 @@ export async function updateProfile(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Не авторизован" };
 
-  const { error } = await supabase
+  const db = await getServerDb();
+
+  const { error } = await db
     .from("profiles")
     .update({
       display_name: formData.get("displayName") as string,
@@ -96,6 +105,9 @@ export async function updateProfile(formData: FormData) {
     })
     .eq("id", user.id);
 
-  if (error) return { error: error.message };
+  if (error) {
+    logDbError("profile.update", error);
+    return { error: error.message };
+  }
   return { success: true };
 }
