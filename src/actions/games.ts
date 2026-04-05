@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { logSupabaseSessionForDebug } from "@/lib/supabase/logSession";
 import { logDbError } from "@/lib/logger";
 import { type PitIndex } from "@/lib/engine/types";
 import { createInitialBoard, makeMove } from "@/lib/engine/TogyzEngine";
@@ -25,10 +26,15 @@ export async function saveGame(input: SaveGameInput) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Не авторизован" };
 
-  await supabase.from("profiles").upsert(
+  await logSupabaseSessionForDebug(supabase, "games.saveGame");
+
+  const profileRes = await supabase.from("profiles").upsert(
     { id: user.id, display_name: user.email || "" },
     { onConflict: "id", ignoreDuplicates: true }
   );
+  if (profileRes.error) {
+    logDbError("games.profiles_upsert", profileRes.error);
+  }
 
   let board = createInitialBoard();
   const movesWithFen: { moveNumber: number; side: "white" | "black"; pit: number; fen: string }[] = [];
