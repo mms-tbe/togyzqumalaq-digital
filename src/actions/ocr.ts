@@ -97,18 +97,64 @@ async function processPaddleOcr(base64Image: string): Promise<{ content?: string
 }
 
 /**
- * Unified OCR entry point — dispatches to selected model
+ * AlemLLM — post-process raw OCR text into structured move table.
+ * Uses the AlemLLM model from alem.plus to extract numbers from noisy OCR text.
+ */
+async function structureWithAlemLLM(rawOcrText: string): Promise<string> {
+  try {
+    const response = await fetch("https://llm.alem.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.ALEMLLM_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "alemllm",
+        temperature: 0,
+        max_tokens: 4096,
+        messages: [{
+          role: "user",
+          content: `Extract move numbers from this togyzqumalaq score sheet OCR text. Output ONLY a markdown table with columns: | № | Ак | Кара |. Each row = one move. Only include rows where all 3 values are numbers. Skip all text, names, headers.\n\nOCR text:\n${rawOcrText.slice(0, 3000)}`,
+        }],
+      }),
+    });
+
+    if (!response.ok) return rawOcrText; // Fallback to raw text
+
+    const result = await response.json();
+    const content = result.choices?.[0]?.message?.content;
+    return content || rawOcrText;
+  } catch {
+    return rawOcrText; // Fallback to raw text on any error
+  }
+}
+
+/**
+ * Unified OCR entry point — dispatches to selected model.
+ * After OCR, optionally passes through AlemLLM for structured extraction.
  */
 export async function processOcrDirect(
   base64Image: string,
   mimeType: string,
   model: OcrModel = "deepseek-ocr"
 ): Promise<{ content?: string; error?: string }> {
+  let result: { content?: string; error?: string };
+
   switch (model) {
     case "paddle-ocr":
-      return processPaddleOcr(base64Image);
+      result = await processPaddleOcr(base64Image);
+      break;
     case "deepseek-ocr":
     default:
-      return processDeepseek(base64Image, mimeType);
+      result = await processDeepseek(base64Image, mimeType);
+      break;
   }
+
+  // If OCR succeeded, pass through AlemLLM for structured extraction
+  if (result.content && process.env.ALEMLLM_API_KEY) {
+    const structured = await structureWithAlemLLM(result.content);
+    return { content: structured };
+  }
+
+  return result;
 }
