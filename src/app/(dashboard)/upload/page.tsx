@@ -202,7 +202,7 @@ export default function UploadPage() {
 
       const parsed = parseOcrResponse(result.content!);
       if (!parsed) {
-        setOcrError("Не удалось распарсить ответ OCR. Попробуйте другое фото.");
+        setOcrError("Не удалось распарсить ответ OCR. Raw: " + result.content!.slice(0, 500));
         setProcessing(false);
         return;
       }

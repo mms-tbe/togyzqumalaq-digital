@@ -94,31 +94,44 @@ function parseMarkdownTable(raw: string): OcrResult | null {
     if (bMatch) blackName = bMatch[1].trim();
   }
 
-  // Extract move rows from markdown tables
-  // Pattern: | number | number | number |
-  const tableRowRegex = /\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|/g;
+  // Extract moves from markdown tables
+  // Tables can be wide: | №  | Ак  | Кара  | №  | Ак  | Кара  | №  | Ак  | Кара  |
+  // Or narrow: | №  | Ак  | Кара  |
   let match;
 
-  while ((match = tableRowRegex.exec(raw)) !== null) {
-    const moveNum = parseInt(match[1]);
-    const whiteVal = match[2];
-    const blackVal = match[3];
+  // Parse each table row — extract ALL cells, then group into triplets (№, Ак, Кара)
+  for (const line of lines) {
+    // Skip header/separator rows
+    if (line.includes("---") || line.includes("Ак") || line.includes("Кара") || line.includes("№")) continue;
 
-    if (moveNum < 1 || moveNum > 100) continue;
+    // Extract all cell values from a pipe-delimited row
+    const cells = line.split("|").map((c) => c.trim()).filter((c) => c.length > 0);
+    if (cells.length < 3) continue;
 
-    // Keep the raw two-digit value as notation (e.g. "43", "91")
-    const existing = moves.find((m) => m.n === moveNum);
-    if (!existing) {
-      moves.push({ n: moveNum, w: whiteVal.trim(), b: blackVal.trim() });
+    // Group cells into triplets: [moveNum, white, black]
+    for (let i = 0; i + 2 < cells.length; i += 3) {
+      const moveNum = parseInt(cells[i]);
+      if (isNaN(moveNum) || moveNum < 1 || moveNum > 200) continue;
+
+      const whiteVal = cells[i + 1];
+      const blackVal = cells[i + 2];
+
+      // Skip if values look like headers
+      if (/[а-яА-Я]/.test(whiteVal) || /[а-яА-Я]/.test(blackVal)) continue;
+
+      const existing = moves.find((m) => m.n === moveNum);
+      if (!existing) {
+        moves.push({ n: moveNum, w: whiteVal, b: blackVal });
+      }
     }
   }
 
-  // If no table rows found, try line-based parsing: "1. 4 9" or "1  4  9"
+  // If no table rows found, try line-based parsing: "1. 78 16" or "1  78  16"
   if (moves.length === 0) {
     const lineRegex = /^\s*(\d+)[\.\)]\s+(\d+)\s+(\d+)/gm;
     while ((match = lineRegex.exec(raw)) !== null) {
       const moveNum = parseInt(match[1]);
-      if (moveNum >= 1 && moveNum <= 100) {
+      if (moveNum >= 1 && moveNum <= 200) {
         moves.push({ n: moveNum, w: match[2].trim(), b: match[3].trim() });
       }
     }
