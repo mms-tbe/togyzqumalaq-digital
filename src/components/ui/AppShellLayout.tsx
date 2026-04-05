@@ -1,14 +1,12 @@
 "use client";
 
-import { AppShell, Burger, Group, Title, NavLink, ActionIcon, useMantineColorScheme } from "@mantine/core";
+import { AppShell, Burger, Group, Title, NavLink } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import {
   IconUpload,
   IconEdit,
   IconArchive,
   IconUser,
-  IconSun,
-  IconMoon,
 } from "@tabler/icons-react";
 import { usePathname, useRouter } from "next/navigation";
 import { UserMenu } from "./UserMenu";
@@ -25,7 +23,6 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
   const [opened, { toggle }] = useDisclosure();
   const pathname = usePathname();
   const router = useRouter();
-  const { colorScheme, toggleColorScheme } = useMantineColorScheme();
 
   return (
     <AppShell
@@ -34,25 +31,17 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
       padding="sm"
     >
       <AppShell.Header>
-        <Group h="100%" px="sm" justify="space-between">
-          <Group gap="xs">
+        <Group h="100%" px="sm" justify="space-between" wrap="nowrap">
+          <Group gap="xs" wrap="nowrap" style={{ minWidth: 0, flex: 1 }}>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Image src="/logo.jpg" alt="Togyzqumalaq" width={80} height={80} />
-            <Title order={3} style={{ fontSize: 18, letterSpacing: -0.3 }}>
+            <Image src="/logo.jpg" alt="Togyzqumalaq" width={80} height={80} style={{ flexShrink: 0 }} />
+            <Title order={3} style={{ fontSize: 18, letterSpacing: -0.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               Togyzqumalaq Digital
             </Title>
           </Group>
-          <Group gap="xs">
-            <ActionIcon
-              variant="default"
-              size="lg"
-              radius="md"
-              onClick={() => toggleColorScheme()}
-            >
-              {colorScheme === "dark" ? <IconSun size={22} /> : <IconMoon size={22} />}
-            </ActionIcon>
+          <div style={{ flexShrink: 0 }}>
             <UserMenu />
-          </Group>
+          </div>
         </Group>
       </AppShell.Header>
 
