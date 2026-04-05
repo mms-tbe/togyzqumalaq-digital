@@ -1,6 +1,6 @@
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createClient as createServerClient } from "@/lib/supabase/server";
-import { looksLikeSupabaseJwtKey } from "@/lib/supabase/jwt";
+import { looksLikeSupabaseJwtKey, normalizeSupabaseKey } from "@/lib/supabase/jwt";
 
 /**
  * Self-hosted PostgREST sometimes emits JWTs with an empty `role` claim, which causes
@@ -15,13 +15,14 @@ import { looksLikeSupabaseJwtKey } from "@/lib/supabase/jwt";
  * - `DEBUG_TOGYZ=1` — optional; enables `[togyz:...]` logs in `src/lib/logger.ts`
  */
 export function createServiceRoleClient(): SupabaseClient | null {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const raw = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = normalizeSupabaseKey(raw);
   if (!url || !key) return null;
   if (!looksLikeSupabaseJwtKey(key)) {
-    if (process.env.NODE_ENV === "development") {
+    if (process.env.NODE_ENV === "development" && raw?.trim()) {
       console.warn(
-        "[togyz] SUPABASE_SERVICE_ROLE_KEY must be the long JWT from Supabase → Settings → API (service_role), not the secret name. Ignoring; DB will use the session client."
+        "[togyz] SUPABASE_SERVICE_ROLE_KEY must be one line, three segments separated by dots (JWT from Supabase → Settings → API → service_role). Ignoring; DB uses session client → possible role \"\" error."
       );
     }
     return null;

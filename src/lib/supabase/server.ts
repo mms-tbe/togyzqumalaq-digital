@@ -1,11 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { looksLikeSupabaseJwtKey } from "@/lib/supabase/jwt";
+import { looksLikeSupabaseJwtKey, normalizeSupabaseKey } from "@/lib/supabase/jwt";
 
 export async function createClient() {
   const cookieStore = await cookies();
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const anon = normalizeSupabaseKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   if (process.env.NODE_ENV === "development") {
     if (!url || !looksLikeSupabaseJwtKey(anon)) {
@@ -17,7 +17,7 @@ export async function createClient() {
 
   return createServerClient(
     url!,
-    anon!,
+    anon,
     {
       cookies: {
         getAll() {
