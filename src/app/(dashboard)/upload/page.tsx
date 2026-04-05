@@ -263,15 +263,38 @@ export default function UploadPage() {
   async function handleSave() {
     setSaving(true);
 
+    // Use engine moveNumber before each move (same as manual page). The old rule
+    // (increment only after black) duplicated (moveNumber, side) when a row had
+    // white but no black before the next white — violates moves_game_id_move_number_side_key.
+    let board = createInitialBoard();
     const movesWithNotation: { moveNumber: number; side: "white" | "black"; notation: string }[] = [];
-    let moveNum = 1;
     for (const n of replayData.notations) {
-      if (n.side === "white") {
-        movesWithNotation.push({ moveNumber: moveNum, side: "white", notation: n.notation });
-      } else {
-        movesWithNotation.push({ moveNumber: moveNum, side: "black", notation: n.notation });
-        moveNum++;
+      const pit = parseInt(n.notation[0], 10) as PitIndex;
+      if (!pit || pit < 1 || pit > 9) {
+        notifications.show({ message: `Некорректная нотация: ${n.notation}`, color: "red" });
+        setSaving(false);
+        return;
       }
+      if (n.side !== board.side) {
+        notifications.show({
+          message: "Порядок ходов не совпадает с очередью (проверьте пустые клетки в таблице).",
+          color: "red",
+        });
+        setSaving(false);
+        return;
+      }
+      movesWithNotation.push({
+        moveNumber: board.moveNumber,
+        side: n.side,
+        notation: n.notation,
+      });
+      const result = makeMove(board, pit);
+      if (!result) {
+        notifications.show({ message: `Невалидный ход: ${n.notation}`, color: "red" });
+        setSaving(false);
+        return;
+      }
+      board = result.boardAfter;
     }
 
     const result = await saveGame({
