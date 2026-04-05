@@ -83,16 +83,7 @@ function parseMarkdownTable(raw: string): OcrResult | null {
   const moves: OcrMove[] = [];
   const lines = raw.split("\n");
 
-  // Extract player names
-  let whiteName: string | null = null;
-  let blackName: string | null = null;
-
-  for (const line of lines) {
-    const wMatch = line.match(/Бастау[шы]*[:：]\s*(.+)/i);
-    if (wMatch) whiteName = wMatch[1].trim();
-    const bMatch = line.match(/Костау[шы]*[:：]\s*(.+)/i);
-    if (bMatch) blackName = bMatch[1].trim();
-  }
+  // Player names not extracted — user fills them manually
 
   // Extract moves from markdown tables
   // Tables can be wide: | №  | Ак  | Кара  | №  | Ак  | Кара  | №  | Ак  | Кара  |
@@ -163,8 +154,8 @@ function parseMarkdownTable(raw: string): OcrResult | null {
     round: null,
     table: null,
     date: null,
-    white_player: whiteName,
-    black_player: blackName,
+    white_player: null,
+    black_player: null,
     result: null,
     moves,
   };
