@@ -2,6 +2,7 @@
   max-width: 720px;
   margin: 0 auto;
   font-family: system-ui, -apple-system, sans-serif;
+  overflow: hidden;
 }
 
 /* ── Board ── */
@@ -300,24 +301,88 @@
 
 /* ── Responsive ── */
 @media (max-width: 640px) {
+  .wrapper {
+    max-width: 100%;
+  }
+
+  .board {
+    padding: 2px 3px;
+  }
+
+  .pitsRow {
+    gap: 2px;
+  }
+
   .pit {
-    min-height: 58px;
-    padding: 4px 2px;
+    min-height: 42px;
+    padding: 3px 1px;
   }
 
   .stone {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
+  }
+
+  .stonesGrid {
+    gap: 1px;
   }
 
   .countBadge {
-    width: 23px;
-    height: 23px;
-    font-size: 10px;
+    width: 20px;
+    height: 20px;
+    font-size: 9px;
+  }
+
+  .badgesRow {
+    gap: 2px;
+    padding: 1px 0;
   }
 
   .pitNumber {
+    font-size: 9px;
+  }
+
+  .kazanBar {
+    height: 26px;
+    margin: 3px 0;
+  }
+
+  .kazanScore {
+    font-size: 11px;
+    padding: 1px 6px;
+    min-width: 24px;
+  }
+
+  .kazanLabel {
+    font-size: 11px;
+  }
+
+  .playerLabel {
+    font-size: 11px;
+  }
+
+  .turnIndicator {
+    font-size: 11px;
+  }
+
+  .fenArea {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .fenValue {
     font-size: 10px;
+    padding: 4px 6px;
+  }
+
+  .pgnValue {
+    font-size: 10px;
+    min-height: 40px;
+    padding: 4px 6px;
+  }
+
+  .moveList {
+    max-height: 200px;
   }
 
   .moveRow {

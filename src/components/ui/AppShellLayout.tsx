@@ -29,23 +29,23 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShell
-      header={{ height: 80 }}
-      navbar={{ width: 280, breakpoint: "sm", collapsed: { mobile: !opened } }}
-      padding="md"
+      header={{ height: 60 }}
+      navbar={{ width: 260, breakpoint: "sm", collapsed: { mobile: !opened } }}
+      padding="sm"
     >
       <AppShell.Header>
-        <Group h="100%" px="lg" justify="space-between">
-          <Group gap="md">
+        <Group h="100%" px="sm" justify="space-between">
+          <Group gap="xs">
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Image src="/logo.png" alt="Togyzqumalaq" width={56} height={56} />
-            <Title order={2} style={{ fontSize: 22, letterSpacing: -0.3 }}>
+            <Image src="/logo.png" alt="Togyzqumalaq" width={40} height={40} />
+            <Title order={3} style={{ fontSize: 18, letterSpacing: -0.3 }}>
               Togyzqumalaq Digital
             </Title>
           </Group>
-          <Group gap="sm">
+          <Group gap="xs">
             <ActionIcon
               variant="default"
-              size="xl"
+              size="lg"
               radius="md"
               onClick={() => toggleColorScheme()}
             >

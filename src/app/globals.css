@@ -2,3 +2,47 @@
 @import "@mantine/notifications/styles.css";
 @import "@mantine/dropzone/styles.css";
 @import "@mantine/nprogress/styles.css";
+
+/* Mobile overrides */
+@media (max-width: 640px) {
+  /* Stepper labels */
+  .mantine-Stepper-stepLabel {
+    font-size: 11px !important;
+  }
+  .mantine-Stepper-stepDescription {
+    font-size: 10px !important;
+  }
+
+  /* Tables */
+  .mantine-Table-td,
+  .mantine-Table-th {
+    padding: 4px 6px !important;
+    font-size: 12px !important;
+  }
+
+  /* TextInput in tables */
+  .mantine-TextInput-input,
+  .mantine-NumberInput-input {
+    min-height: 30px !important;
+  }
+
+  /* Title */
+  h2.mantine-Title-root {
+    font-size: 20px !important;
+  }
+
+  /* Grid gutter */
+  .mantine-Grid-root {
+    --grid-gutter: 8px !important;
+  }
+
+  /* ScrollArea */
+  .mantine-ScrollArea-root {
+    max-height: 250px !important;
+  }
+
+  /* Paper padding */
+  .mantine-Paper-root {
+    padding: 8px !important;
+  }
+}
