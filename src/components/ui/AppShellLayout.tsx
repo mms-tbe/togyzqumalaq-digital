@@ -7,6 +7,7 @@ import {
   IconEdit,
   IconArchive,
   IconUser,
+  IconUsers,
 } from "@tabler/icons-react";
 import { usePathname, useRouter } from "next/navigation";
 import { UserMenu } from "./UserMenu";
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
   { label: "Загрузить бланк", href: "/upload", icon: IconUpload },
   { label: "Ручной ввод", href: "/manual", icon: IconEdit },
   { label: "Архив партий", href: "/archive", icon: IconArchive },
+  { label: "Участники", href: "/users", icon: IconUsers },
   { label: "Профиль", href: "/profile", icon: IconUser },
 ];
 

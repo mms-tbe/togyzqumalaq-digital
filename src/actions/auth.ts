@@ -29,7 +29,8 @@ export async function signUp(formData: FormData) {
     await db.from("profiles").upsert({
       id: data.user.id,
       display_name: displayName || email,
-    });
+      email,
+    }, { onConflict: "id" });
   }
 
   redirect("/upload");
@@ -49,12 +50,25 @@ export async function signIn(formData: FormData) {
     return { error: error.message };
   }
 
-  // Ensure profile exists
+  // Ensure profile exists; синхронизируем email, имя не затираем пустым
   if (data.user) {
     const db = await getServerDb();
+    const { data: row } = await db
+      .from("profiles")
+      .select("display_name")
+      .eq("id", data.user.id)
+      .maybeSingle();
+    const displayName =
+      (row?.display_name && String(row.display_name).trim()) ||
+      data.user.email ||
+      "";
     await db.from("profiles").upsert(
-      { id: data.user.id, display_name: data.user.email || "" },
-      { onConflict: "id", ignoreDuplicates: true }
+      {
+        id: data.user.id,
+        display_name: displayName,
+        email: data.user.email ?? null,
+      },
+      { onConflict: "id" }
     );
   }
 

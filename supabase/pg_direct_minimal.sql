@@ -35,6 +35,7 @@ END $$;
 
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY,
+  email TEXT,
   display_name TEXT NOT NULL DEFAULT '',
   avatar_url TEXT,
   club TEXT,
@@ -105,3 +106,10 @@ CREATE TABLE IF NOT EXISTS public.ocr_jobs (
 
 CREATE INDEX IF NOT EXISTS idx_ocr_jobs_user ON public.ocr_jobs (user_id);
 CREATE INDEX IF NOT EXISTS idx_ocr_jobs_status ON public.ocr_jobs (status);
+
+-- Старые БД без колонки email (до этого патча)
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS profiles_email_lower_idx
+  ON public.profiles (lower(email))
+  WHERE email IS NOT NULL AND trim(email) <> '';

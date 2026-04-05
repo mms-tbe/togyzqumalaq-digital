@@ -20,10 +20,12 @@ export async function saveGameTransaction(
     await client.query("BEGIN");
 
     await client.query(
-      `INSERT INTO public.profiles (id, display_name)
-       VALUES ($1, $2)
-       ON CONFLICT (id) DO UPDATE SET display_name = EXCLUDED.display_name`,
-      [userId, email || ""]
+      `INSERT INTO public.profiles (id, display_name, email)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (id) DO UPDATE SET
+         display_name = EXCLUDED.display_name,
+         email = COALESCE(NULLIF(trim(EXCLUDED.email), ''), profiles.email)`,
+      [userId, email || "", email || null]
     );
 
     let gameResult: "white" | "black" | "draw" | "ongoing" = "ongoing";
