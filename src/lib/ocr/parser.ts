@@ -85,39 +85,62 @@ function parseMarkdownTable(raw: string): OcrResult | null {
 
   // Player names not extracted — user fills them manually
 
-  // Extract moves from markdown tables
-  // Tables can be wide: | №  | Ак  | Кара  | №  | Ак  | Кара  | №  | Ак  | Кара  |
-  // Or narrow: | №  | Ак  | Кара  |
   let match;
 
-  // Parse each table row — extract ALL cells, then group into triplets (№, Ак, Кара)
-  for (const line of lines) {
-    // Skip header/separator rows
-    if (line.includes("---") || line.includes("Ак") || line.includes("Кара") || line.includes("№")) continue;
+  // ── Strategy 1: HTML tables from PaddleOCR ──
+  // Format: <tr><td>1</td><td>78</td><td>16</td>...</tr>
+  if (raw.includes("<table") || raw.includes("<tr>") || raw.includes("<td")) {
+    const rowRegex = /<tr[^>]*>(.*?)<\/tr>/gi;
+    let rowMatch;
+    while ((rowMatch = rowRegex.exec(raw)) !== null) {
+      const cellRegex = /<td[^>]*>(.*?)<\/td>/gi;
+      const cells: string[] = [];
+      let cellMatch;
+      while ((cellMatch = cellRegex.exec(rowMatch[1])) !== null) {
+        // Strip any remaining HTML/formatting, keep only alphanumeric
+        const val = cellMatch[1].replace(/<[^>]*>/g, "").replace(/[^0-9a-zA-Zа-яА-Я]/g, "").trim();
+        cells.push(val);
+      }
+      if (cells.length < 3) continue;
 
-    // Extract all cell values from a pipe-delimited row
-    const cells = line.split("|").map((c) => c.trim()).filter((c) => c.length > 0);
-    if (cells.length < 3) continue;
-
-    // Group cells into triplets: [moveNum, white, black]
-    for (let i = 0; i + 2 < cells.length; i += 3) {
-      const moveNum = parseInt(cells[i]);
-      if (isNaN(moveNum) || moveNum < 1 || moveNum > 200) continue;
-
-      const whiteVal = cells[i + 1];
-      const blackVal = cells[i + 2];
-
-      // Skip if values look like headers
-      if (/[а-яА-Я]/.test(whiteVal) || /[а-яА-Я]/.test(blackVal)) continue;
-
-      const existing = moves.find((m) => m.n === moveNum);
-      if (!existing) {
-        moves.push({ n: moveNum, w: whiteVal, b: blackVal });
+      // Group cells into triplets: [moveNum, white, black]
+      for (let i = 0; i + 2 < cells.length; i += 3) {
+        const moveNum = parseInt(cells[i]);
+        if (isNaN(moveNum) || moveNum < 1 || moveNum > 200) continue;
+        const wVal = cells[i + 1];
+        const bVal = cells[i + 2];
+        if (/^[а-яА-Я]+$/.test(wVal) || /^[а-яА-Я]+$/.test(bVal)) continue; // skip headers
+        const existing = moves.find((m) => m.n === moveNum);
+        if (!existing && wVal && bVal) {
+          moves.push({ n: moveNum, w: wVal, b: bVal });
+        }
       }
     }
   }
 
-  // Fallback 1: line-based "1. 78 16" or "1  78  16"
+  // ── Strategy 2: Markdown pipe tables ──
+  if (moves.length === 0) {
+    for (const line of lines) {
+      if (line.includes("---") || /[А-Яа-яA-Za-z]{2,}/.test(line.replace(/\|/g, "").trim())) continue;
+
+      const cells = line.split("|").map((c) => c.trim()).filter((c) => c.length > 0);
+      if (cells.length < 3) continue;
+
+      for (let i = 0; i + 2 < cells.length; i += 3) {
+        const moveNum = parseInt(cells[i]);
+        if (isNaN(moveNum) || moveNum < 1 || moveNum > 200) continue;
+        const wVal = cells[i + 1];
+        const bVal = cells[i + 2];
+        if (/[а-яА-Я]/.test(wVal) || /[а-яА-Я]/.test(bVal)) continue;
+        const existing = moves.find((m) => m.n === moveNum);
+        if (!existing) {
+          moves.push({ n: moveNum, w: wVal, b: bVal });
+        }
+      }
+    }
+  }
+
+  // ── Strategy 3: line-based "1. 78 16" ──
   if (moves.length === 0) {
     const lineRegex = /^\s*(\d+)[\.\)]\s+(\d+)\s+(\d+)/gm;
     while ((match = lineRegex.exec(raw)) !== null) {
@@ -128,7 +151,7 @@ function parseMarkdownTable(raw: string): OcrResult | null {
     }
   }
 
-  // Fallback 2: any row of 3+ numbers separated by spaces/tabs
+  // ── Strategy 4: any triplets of numbers ──
   if (moves.length === 0) {
     const numRowRegex = /(\d{1,3})\s+(\d{1,3})\s+(\d{1,3})/g;
     let seqNum = 1;
@@ -136,7 +159,6 @@ function parseMarkdownTable(raw: string): OcrResult | null {
       const a = parseInt(match[1]);
       const b = parseInt(match[2]);
       const c = parseInt(match[3]);
-      // First number is move number if it matches sequence
       if (a === seqNum && b >= 1 && b <= 99 && c >= 1 && c <= 99) {
         moves.push({ n: a, w: match[2], b: match[3] });
         seqNum++;
