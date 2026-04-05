@@ -1,7 +1,8 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
-import { getServerDb } from "@/lib/supabase/db";
+import { getSession } from "@/lib/auth/session";
+import { getPgPool } from "@/lib/db/pool";
+import * as usersRepo from "@/lib/db/usersRepo";
 import { logDbError } from "@/lib/logger";
 
 export type ProfileRow = {
@@ -14,22 +15,28 @@ export type ProfileRow = {
   created_at: string;
 };
 
-/** Список public.profiles (виден всем авторизованным — см. RLS в миграции). */
 export async function listUsers(): Promise<{ users: ProfileRow[] } | { error: string }> {
-  const auth = await createClient();
-  const { data: { user } } = await auth.auth.getUser();
-  if (!user) return { error: "Не авторизован" };
+  const session = await getSession();
+  if (!session) return { error: "Не авторизован" };
 
-  const db = await getServerDb();
-  const { data, error } = await db
-    .from("profiles")
-    .select("id, email, display_name, club, rating, role, created_at")
-    .order("created_at", { ascending: false });
+  const pool = getPgPool();
+  if (!pool) return { error: "База данных не настроена" };
 
-  if (error) {
-    logDbError("users.list", error);
-    return { error: error.message };
+  try {
+    const rows = await usersRepo.listProfilesPublic(pool);
+    const users: ProfileRow[] = rows.map((u) => ({
+      id: u.id,
+      email: u.email,
+      display_name: u.display_name,
+      club: u.club,
+      rating: u.rating,
+      role: u.role,
+      created_at: u.created_at instanceof Date ? u.created_at.toISOString() : String(u.created_at),
+    }));
+    return { users };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Ошибка БД";
+    logDbError("users.list", { message: msg });
+    return { error: msg };
   }
-
-  return { users: (data ?? []) as ProfileRow[] };
 }

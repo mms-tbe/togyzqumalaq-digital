@@ -21,10 +21,8 @@ export default async function UsersPage() {
     <Stack>
       <Title order={2}>Участники</Title>
       <Alert icon={<IconInfoCircle size={18} />} color="blue" variant="light">
-        Пароли в приложении не хранятся: вход через Supabase Auth, хеш пароля лежит только в{" "}
-        <Code>auth.users</Code> на сервере Supabase. В <Code>public.profiles</Code> — email и имя
-        для справочника (миграция <Code>00002_profiles_email.sql</Code> / обновление{" "}
-        <Code>pg_direct_minimal.sql</Code>).
+        Учётные записи в <Code>public.profiles</Code>: колонка <Code>password_hash</Code> — bcrypt (только
+        на сервере). Сессия — httpOnly cookie <Code>togyz_session</Code> (JWT).
       </Alert>
       <Paper withBorder p="md">
         <Table striped highlightOnHover>

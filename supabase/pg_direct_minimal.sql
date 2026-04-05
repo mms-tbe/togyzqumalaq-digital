@@ -113,3 +113,5 @@ ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS profiles_email_lower_idx
   ON public.profiles (lower(email))
   WHERE email IS NOT NULL AND trim(email) <> '';
+
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS password_hash TEXT;
