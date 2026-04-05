@@ -11,34 +11,55 @@ import {
   Button,
   SimpleGrid,
   ActionIcon,
+  Loader,
+  Center,
 } from "@mantine/core";
 import { IconEye, IconTrash, IconArchive } from "@tabler/icons-react";
-import { getGamesLocal, deleteGameLocal, type StoredGame } from "@/lib/storage/games";
+import { getGames, deleteGame } from "@/actions/games";
 import { useRouter } from "next/navigation";
 import { notifications } from "@mantine/notifications";
+
+interface GameRow {
+  id: string;
+  result: string;
+  source_type: string;
+  notes: string | null;
+  created_at: string;
+}
 
 const RESULT_LABELS: Record<string, { label: string; color: string }> = {
   white: { label: "1-0", color: "blue" },
   black: { label: "0-1", color: "red" },
   draw: { label: "½-½", color: "gray" },
   ongoing: { label: "...", color: "yellow" },
-  "1-0": { label: "1-0", color: "blue" },
-  "0-1": { label: "0-1", color: "red" },
-  "1/2-1/2": { label: "½-½", color: "gray" },
 };
 
 export default function ArchivePage() {
   const router = useRouter();
-  const [games, setGames] = useState<StoredGame[]>([]);
+  const [games, setGames] = useState<GameRow[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setGames(getGamesLocal());
-  }, []);
+  useEffect(() => { loadGames(); }, []);
 
-  function handleDelete(id: string) {
-    deleteGameLocal(id);
-    setGames(getGamesLocal());
-    notifications.show({ message: "Партия удалена", color: "green" });
+  async function loadGames() {
+    setLoading(true);
+    const result = await getGames();
+    setGames((result.games || []) as GameRow[]);
+    setLoading(false);
+  }
+
+  async function handleDelete(id: string) {
+    const result = await deleteGame(id);
+    if (result.error) {
+      notifications.show({ message: result.error, color: "red" });
+    } else {
+      notifications.show({ message: "Партия удалена", color: "green" });
+      loadGames();
+    }
+  }
+
+  if (loading) {
+    return <Center h={300}><Loader /></Center>;
   }
 
   return (
@@ -65,26 +86,15 @@ export default function ArchivePage() {
                 <Stack gap="xs">
                   <Group justify="space-between">
                     <Badge color={r.color}>{r.label}</Badge>
-                    <Badge variant="light">
-                      {game.sourceType === "ocr" ? "OCR" : "Ручной"}
-                    </Badge>
+                    <Badge variant="light">{game.source_type === "ocr" ? "OCR" : "Ручной"}</Badge>
                   </Group>
-                  <Text size="sm" fw={500}>
-                    {game.whitePlayer} vs {game.blackPlayer}
-                  </Text>
-                  {game.tournament && (
-                    <Text size="xs" c="dimmed">{game.tournament}</Text>
-                  )}
+                  <Text size="sm" lineClamp={2}>{game.notes || "Без описания"}</Text>
                   <Text size="xs" c="dimmed">
-                    {new Date(game.createdAt).toLocaleDateString("ru-RU")} | {game.moves.length} ходов
+                    {new Date(game.created_at).toLocaleDateString("ru-RU")}
                   </Text>
                   <Group justify="flex-end">
-                    <Button
-                      size="xs"
-                      variant="light"
-                      leftSection={<IconEye size={14} />}
-                      onClick={() => router.push(`/game/${game.id}`)}
-                    >
+                    <Button size="xs" variant="light" leftSection={<IconEye size={14} />}
+                      onClick={() => router.push(`/game/${game.id}`)}>
                       Открыть
                     </Button>
                     <ActionIcon variant="light" color="red" onClick={() => handleDelete(game.id)}>

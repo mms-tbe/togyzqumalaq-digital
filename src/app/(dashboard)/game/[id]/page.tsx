@@ -15,9 +15,11 @@ import {
   ActionIcon,
   Tooltip,
   CopyButton,
+  Loader,
+  Center,
 } from "@mantine/core";
 import { IconCopy, IconCheck, IconDownload, IconArrowLeft } from "@tabler/icons-react";
-import { getGameByIdLocal, type StoredGame } from "@/lib/storage/games";
+import { getGameById } from "@/actions/games";
 import { TogyzBoard } from "@/components/board/TogyzBoard";
 import { BoardControls } from "@/components/board/BoardControls";
 import { MoveListPanel } from "@/components/board/MoveListPanel";
@@ -26,43 +28,64 @@ import { createInitialBoard, makeMove, boardToFen } from "@/lib/engine/TogyzEngi
 import { generatePgn, toPgnMoves } from "@/lib/engine/pgn";
 import { useRouter } from "next/navigation";
 
+interface MoveRow {
+  move_number: number;
+  side: string;
+  from_pit: number;
+  fen_after: string;
+}
+
 export default function GamePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const [game, setGame] = useState<StoredGame | null>(null);
+  const [game, setGame] = useState<Record<string, unknown> | null>(null);
+  const [moves, setMoves] = useState<MoveRow[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setGame(getGameByIdLocal(id));
+    loadGame();
   }, [id]);
+
+  async function loadGame() {
+    setLoading(true);
+    const result = await getGameById(id);
+    if (result.error) {
+      setError(result.error);
+      setLoading(false);
+      return;
+    }
+    setGame(result.game as Record<string, unknown>);
+    setMoves((result.moves || []) as MoveRow[]);
+    setLoading(false);
+  }
 
   // Replay moves
   const replayData = useMemo(() => {
-    if (!game) return { boards: [createInitialBoard()], notations: [] };
     const boards: BoardState[] = [createInitialBoard()];
     const notations: { notation: string; side: "white" | "black" }[] = [];
     let board = createInitialBoard();
 
-    for (const move of game.moves) {
-      // Extract pit from notation first digit, or fall back to legacy pit field
-      const pit = (move as any).pit ?? parseInt(move.notation[0]);
-      const result = makeMove(board, pit as PitIndex);
+    for (const move of moves) {
+      const result = makeMove(board, move.from_pit as PitIndex);
       if (result) {
         board = result.boardAfter;
         boards.push(board);
-        notations.push({ notation: move.notation || result.notation, side: move.side });
+        notations.push({ notation: result.notation, side: move.side as "white" | "black" });
       }
     }
     return { boards, notations };
-  }, [game]);
+  }, [moves]);
 
   const viewBoard = replayData.boards[currentStep] || createInitialBoard();
   const currentFen = useMemo(() => boardToFen(viewBoard), [viewBoard]);
   const pgnMoves = useMemo(() => toPgnMoves(replayData.notations), [replayData.notations]);
   const pgnText = useMemo(
     () => generatePgn(replayData.notations, {
-      white: game?.whitePlayer, black: game?.blackPlayer,
-      event: game?.tournament, result: game?.result,
+      white: (game?.notes as string)?.match(/Белые: ([^,]+)/)?.[1] || "Бастаушы",
+      black: (game?.notes as string)?.match(/Чёрные: ([^,]+)/)?.[1] || "Қостаушы",
+      result: game?.result as string,
     }),
     [replayData.notations, game]
   );
@@ -76,14 +99,6 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
     a.click();
   }
 
-  function exportJson() {
-    const blob = new Blob([JSON.stringify(game, null, 2)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `game_${id}.json`;
-    a.click();
-  }
-
   function exportPgn() {
     const blob = new Blob([pgnText], { type: "text/plain" });
     const a = document.createElement("a");
@@ -92,14 +107,28 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
     a.click();
   }
 
-  if (!game) {
-    return (
-      <Stack>
-        <Text>Партия не найдена</Text>
-        <Button onClick={() => router.push("/archive")}>К архиву</Button>
-      </Stack>
-    );
+  function exportJson() {
+    const data = {
+      game,
+      moves: replayData.notations.map((n, i) => ({
+        moveNumber: moves[i]?.move_number,
+        side: n.side,
+        notation: n.notation,
+      })),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `game_${id}.json`;
+    a.click();
   }
+
+  if (loading) return <Center h={300}><Loader /></Center>;
+  if (error || !game) return (
+    <Stack><Text c="red">{error || "Партия не найдена"}</Text>
+      <Button onClick={() => router.push("/archive")}>К архиву</Button>
+    </Stack>
+  );
 
   return (
     <Stack>
@@ -126,21 +155,14 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
         <Grid.Col span={{ base: 12, md: 7 }}>
           <Stack>
             <TogyzBoard board={viewBoard} />
-            <BoardControls
-              currentStep={currentStep}
-              totalSteps={replayData.boards.length - 1}
-              onStepChange={setCurrentStep}
-            />
+            <BoardControls currentStep={currentStep} totalSteps={replayData.boards.length - 1} onStepChange={setCurrentStep} />
             <Paper p="md" withBorder>
               <Group justify="space-between">
-                <div>
-                  <Text size="sm" fw={600}>{game.whitePlayer} vs {game.blackPlayer}</Text>
-                  {game.tournament && <Text size="xs" c="dimmed">{game.tournament}</Text>}
-                </div>
+                <Text size="sm" c="dimmed">{game.notes as string}</Text>
                 <Group>
-                  <Badge>{game.sourceType === "ocr" ? "OCR" : "Ручной"}</Badge>
-                  <Badge color={game.result === "1-0" || game.result === "white" ? "blue" : game.result === "0-1" || game.result === "black" ? "red" : "gray"}>
-                    {game.result}
+                  <Badge>{game.source_type === "ocr" ? "OCR" : "Ручной"}</Badge>
+                  <Badge color={game.result === "white" ? "blue" : game.result === "black" ? "red" : "gray"}>
+                    {game.result === "white" ? "1-0" : game.result === "black" ? "0-1" : game.result === "draw" ? "½-½" : "..."}
                   </Badge>
                 </Group>
               </Group>
@@ -149,13 +171,7 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
         </Grid.Col>
 
         <Grid.Col span={{ base: 12, md: 5 }}>
-          <MoveListPanel
-            moves={pgnMoves}
-            fen={currentFen}
-            pgn={pgnText}
-            currentStep={currentStep}
-            onStepChange={setCurrentStep}
-          />
+          <MoveListPanel moves={pgnMoves} fen={currentFen} pgn={pgnText} currentStep={currentStep} onStepChange={setCurrentStep} />
         </Grid.Col>
       </Grid>
     </Stack>

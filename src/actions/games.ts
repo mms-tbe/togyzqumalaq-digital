@@ -5,7 +5,7 @@ import { createAnonClient } from "@/lib/supabase/admin";
 import { type PitIndex } from "@/lib/engine/types";
 import { createInitialBoard, makeMove, boardToFen } from "@/lib/engine/TogyzEngine";
 
-interface SaveGameInput {
+export interface SaveGameInput {
   whitePlayer: string;
   blackPlayer: string;
   tournament?: string;
@@ -15,7 +15,7 @@ interface SaveGameInput {
   sourceType: "ocr" | "manual";
   sourceFileUrl?: string;
   ocrModelUsed?: string;
-  moves: { moveNumber: number; side: "white" | "black"; pit: number }[];
+  moves: { moveNumber: number; side: "white" | "black"; notation: string }[];
 }
 
 export async function saveGame(input: SaveGameInput) {
@@ -30,17 +30,23 @@ export async function saveGame(input: SaveGameInput) {
     { onConflict: "id", ignoreDuplicates: true }
   );
 
-  // Generate FEN for each move
+  // Generate FEN for each move (extract pit from notation first digit)
   let board = createInitialBoard();
   const movesWithFen: { moveNumber: number; side: "white" | "black"; pit: number; fen: string }[] = [];
 
   for (const move of input.moves) {
-    const result = makeMove(board, move.pit as PitIndex);
+    const pit = parseInt(move.notation[0]) as PitIndex;
+    if (!pit || pit < 1 || pit > 9) {
+      return { error: `Невалидная нотация: ${move.notation}` };
+    }
+    const result = makeMove(board, pit);
     if (!result) {
-      return { error: `Невалидный ход #${move.moveNumber} ${move.side}: лунка ${move.pit}` };
+      return { error: `Невалидный ход #${move.moveNumber} ${move.side}: ${move.notation}` };
     }
     movesWithFen.push({
-      ...move,
+      moveNumber: move.moveNumber,
+      side: move.side,
+      pit,
       fen: result.fen,
     });
     board = result.boardAfter;

@@ -32,7 +32,7 @@ import {
   IconPlayerPlay,
 } from "@tabler/icons-react";
 import { processOcrDirect, type OcrModel } from "@/actions/ocr";
-import { saveGameLocal } from "@/lib/storage/games";
+import { saveGame } from "@/actions/games";
 import { parseOcrResponse, type OcrResult, type OcrMove } from "@/lib/ocr/parser";
 import { type PitIndex } from "@/lib/engine/types";
 import { createInitialBoard, makeMove, getGameResult, boardToFen } from "@/lib/engine/TogyzEngine";
@@ -259,35 +259,38 @@ export default function UploadPage() {
   }
 
 
-  function handleSave() {
+  async function handleSave() {
     setSaving(true);
 
-    // Build moves from engine-computed notations (replayData has the correct notations)
+    // Build moves from engine-computed notations
     const movesWithNotation: { moveNumber: number; side: "white" | "black"; notation: string }[] = [];
+    let moveNum = 1;
     for (const n of replayData.notations) {
-      const moveNum = n.side === "white"
-        ? Math.floor(movesWithNotation.filter(m => m.side === "white").length) + 1
-        : movesWithNotation.filter(m => m.side === "white").length;
-      movesWithNotation.push({ moveNumber: moveNum, side: n.side, notation: n.notation });
+      if (n.side === "white") {
+        movesWithNotation.push({ moveNumber: moveNum, side: "white", notation: n.notation });
+      } else {
+        movesWithNotation.push({ moveNumber: moveNum, side: "black", notation: n.notation });
+        moveNum++;
+      }
     }
 
-    try {
-      const gameId = saveGameLocal({
-        whitePlayer: whitePlayer || "Бастаушы",
-        blackPlayer: blackPlayer || "Қостаушы",
-        tournament: tournament || undefined,
-        result: gameResult || "ongoing",
-        sourceType: "ocr",
-        moves: movesWithNotation,
-      });
+    const result = await saveGame({
+      whitePlayer: whitePlayer || "Бастаушы",
+      blackPlayer: blackPlayer || "Қостаушы",
+      tournament: tournament || undefined,
+      result: gameResult || "ongoing",
+      sourceType: "ocr",
+      ocrModelUsed: selectedModel,
+      moves: movesWithNotation,
+    });
 
-      notifications.show({ message: "Партия сохранена!", color: "green" });
-      router.push(`/game/${gameId}`);
-    } catch {
-      notifications.show({ message: "Ошибка сохранения", color: "red" });
-    } finally {
-      setSaving(false);
+    setSaving(false);
+    if (result.error) {
+      notifications.show({ message: result.error, color: "red" });
+      return;
     }
+    notifications.show({ message: "Партия сохранена в Supabase!", color: "green" });
+    router.push(`/game/${result.gameId}`);
   }
 
   return (
