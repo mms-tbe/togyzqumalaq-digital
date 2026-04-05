@@ -1,12 +1,23 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { looksLikeSupabaseJwtKey } from "@/lib/supabase/jwt";
 
 export async function createClient() {
   const cookieStore = await cookies();
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+
+  if (process.env.NODE_ENV === "development") {
+    if (!url || !looksLikeSupabaseJwtKey(anon)) {
+      console.warn(
+        "[togyz] Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to the values from Supabase → Settings → API (anon public key is a long JWT with two dots)."
+      );
+    }
+  }
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    url!,
+    anon!,
     {
       cookies: {
         getAll() {
