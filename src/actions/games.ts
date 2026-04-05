@@ -1,34 +1,20 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getPgPool } from "@/lib/db/pool";
+import * as gamesRepo from "@/lib/db/gamesRepo";
 import { logDbError } from "@/lib/logger";
 import { type PitIndex } from "@/lib/engine/types";
 import { createInitialBoard, makeMove } from "@/lib/engine/TogyzEngine";
 import { buildStoredGameFromDb, rowToGameSummary } from "@/lib/games/view";
-import type { GameSummary, StoredGame } from "@/lib/games/types";
+import type { GameSummary, StoredGame, SaveGameInput } from "@/lib/games/types";
 
-export interface SaveGameInput {
-  whitePlayer: string;
-  blackPlayer: string;
-  tournament?: string;
-  round?: number;
-  datePlayed?: string;
-  result: string;
-  sourceType: "ocr" | "manual";
-  sourceFileUrl?: string;
-  ocrModelUsed?: string;
-  moves: { moveNumber: number; side: "white" | "black"; notation: string }[];
-}
+export type { SaveGameInput } from "@/lib/games/types";
 
 export async function saveGame(input: SaveGameInput) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Не авторизован" };
-
-  await supabase.from("profiles").upsert(
-    { id: user.id, display_name: user.email || "" },
-    { onConflict: "id", ignoreDuplicates: true }
-  );
 
   let board = createInitialBoard();
   const movesWithFen: { moveNumber: number; side: "white" | "black"; pit: number; fen: string }[] = [];
@@ -50,6 +36,23 @@ export async function saveGame(input: SaveGameInput) {
     });
     board = result.boardAfter;
   }
+
+  const pool = getPgPool();
+  if (pool) {
+    try {
+      const gameId = await gamesRepo.saveGameTransaction(pool, user.id, user.email ?? "", input, movesWithFen);
+      return { gameId };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Ошибка БД";
+      logDbError("games.pg.save", { message: msg });
+      return { error: msg };
+    }
+  }
+
+  await supabase.from("profiles").upsert(
+    { id: user.id, display_name: user.email || "" },
+    { onConflict: "id", ignoreDuplicates: true }
+  );
 
   let gameResult: "white" | "black" | "draw" | "ongoing" = "ongoing";
   if (input.result === "1-0") gameResult = "white";
@@ -103,6 +106,30 @@ export async function getGames(): Promise<{ games: GameSummary[] } | { error: st
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Не авторизован", games: [] };
 
+  const pool = getPgPool();
+  if (pool) {
+    try {
+      const rows = await gamesRepo.listGames(pool, user.id);
+      const games = rows.map((row) =>
+        rowToGameSummary({
+          id: row.id,
+          created_at:
+            row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+          notes: row.notes,
+          result: row.result,
+          source_type: row.source_type,
+          ocr_model_used: row.ocr_model_used,
+          moves: [{ count: Number(row.move_count) }],
+        } as never)
+      );
+      return { games };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Ошибка БД";
+      logDbError("games.pg.list", { message: msg });
+      return { error: msg, games: [] };
+    }
+  }
+
   const first = await supabase
     .from("games")
     .select(`
@@ -144,6 +171,25 @@ export async function getGameById(id: string): Promise<{ game: StoredGame } | { 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Не авторизован" };
 
+  const pool = getPgPool();
+  if (pool) {
+    try {
+      const game = await gamesRepo.getGameRow(pool, id, user.id);
+      if (!game) return { error: "Партия не найдена" };
+      const moves = await gamesRepo.getMovesRows(pool, id);
+      const gameRow = {
+        ...game,
+        created_at:
+          game.created_at instanceof Date ? game.created_at.toISOString() : String(game.created_at),
+      };
+      return { game: buildStoredGameFromDb(gameRow as never, moves) };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Ошибка БД";
+      logDbError("games.pg.get", { message: msg });
+      return { error: msg };
+    }
+  }
+
   const { data: game, error: gameError } = await supabase
     .from("games")
     .select("*")
@@ -176,6 +222,19 @@ export async function deleteGame(id: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Не авторизован" };
+
+  const pool = getPgPool();
+  if (pool) {
+    try {
+      const ok = await gamesRepo.deleteGameRow(pool, id, user.id);
+      if (!ok) return { error: "Партия не найдена" };
+      return { success: true };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Ошибка БД";
+      logDbError("games.pg.delete", { message: msg });
+      return { error: msg };
+    }
+  }
 
   const { error } = await supabase
     .from("games")
