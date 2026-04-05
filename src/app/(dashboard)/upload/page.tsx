@@ -19,6 +19,7 @@ import {
   ScrollArea,
   Grid,
   ActionIcon,
+  SegmentedControl,
 } from "@mantine/core";
 import { Dropzone, IMAGE_MIME_TYPE } from "@mantine/dropzone";
 import { notifications } from "@mantine/notifications";
@@ -30,7 +31,7 @@ import {
   IconAlertCircle,
   IconPlayerPlay,
 } from "@tabler/icons-react";
-import { processOcrDirect } from "@/actions/ocr";
+import { processOcrDirect, type OcrModel } from "@/actions/ocr";
 import { saveGameLocal } from "@/lib/storage/games";
 import { parseOcrResponse, type OcrResult, type OcrMove } from "@/lib/ocr/parser";
 import { type PitIndex } from "@/lib/engine/types";
@@ -75,6 +76,7 @@ export default function UploadPage() {
   const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
   const [ocrError, setOcrError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<OcrModel>("deepseek-ocr");
 
   // Metadata
   const [whitePlayer, setWhitePlayer] = useState("");
@@ -192,7 +194,7 @@ export default function UploadPage() {
 
     try {
       const { base64, mime } = await resizeAndBase64(file, 1024);
-      const result = await processOcrDirect(base64, mime);
+      const result = await processOcrDirect(base64, mime, selectedModel);
 
       if (result.error) {
         setOcrError(result.error);
@@ -313,8 +315,22 @@ export default function UploadPage() {
             </Dropzone>
 
             {preview && (
-              <Stack mt="md" align="center">
+              <Stack mt="md" align="center" gap="md">
                 <Image src={preview} alt="Preview" maw={400} radius="md" />
+
+                <Stack align="center" gap="xs">
+                  <Text size="sm" fw={600}>Выберите OCR модель:</Text>
+                  <SegmentedControl
+                    value={selectedModel}
+                    onChange={(val) => setSelectedModel(val as OcrModel)}
+                    data={[
+                      { label: "DeepSeek OCR", value: "deepseek-ocr" },
+                      { label: "PaddleOCR", value: "paddle-ocr" },
+                    ]}
+                    size="sm"
+                  />
+                </Stack>
+
                 <Button
                   onClick={handleOcr}
                   loading={processing}
