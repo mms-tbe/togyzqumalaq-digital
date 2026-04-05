@@ -32,7 +32,8 @@ import {
   IconPlayerPlay,
 } from "@tabler/icons-react";
 import { processOcrDirect, type OcrModel } from "@/actions/ocr";
-import { saveGameLocal } from "@/lib/storage/games";
+import { saveGame } from "@/actions/games";
+import { normalizeResultForSave } from "@/lib/games/view";
 import { parseOcrResponse, type OcrResult, type OcrMove } from "@/lib/ocr/parser";
 import { type PitIndex } from "@/lib/engine/types";
 import { createInitialBoard, makeMove, getGameResult, boardToFen } from "@/lib/engine/TogyzEngine";
@@ -262,7 +263,6 @@ export default function UploadPage() {
   async function handleSave() {
     setSaving(true);
 
-    // Build moves from engine-computed notations
     const movesWithNotation: { moveNumber: number; side: "white" | "black"; notation: string }[] = [];
     let moveNum = 1;
     for (const n of replayData.notations) {
@@ -274,20 +274,21 @@ export default function UploadPage() {
       }
     }
 
-    try {
-      const gameId = saveGameLocal({
-        whitePlayer: whitePlayer || "Бастаушы",
-        blackPlayer: blackPlayer || "Қостаушы",
-        tournament: tournament || undefined,
-        result: gameResult || "ongoing",
-        sourceType: "ocr",
-        ocrModelUsed: selectedModel,
-        moves: movesWithNotation,
-      });
+    const result = await saveGame({
+      whitePlayer: whitePlayer || "Бастаушы",
+      blackPlayer: blackPlayer || "Қостаушы",
+      tournament: tournament || undefined,
+      result: normalizeResultForSave(gameResult || "ongoing"),
+      sourceType: "ocr",
+      ocrModelUsed: selectedModel,
+      moves: movesWithNotation,
+    });
+
+    if (result.error) {
+      notifications.show({ message: result.error, color: "red" });
+    } else if (result.gameId) {
       notifications.show({ message: "Партия сохранена!", color: "green" });
-      router.push(`/game/${gameId}`);
-    } catch {
-      notifications.show({ message: "Ошибка сохранения", color: "red" });
+      router.push(`/game/${result.gameId}`);
     }
     setSaving(false);
   }

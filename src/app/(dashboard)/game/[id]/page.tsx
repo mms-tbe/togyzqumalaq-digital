@@ -5,7 +5,8 @@ import {
   Title, Stack, Paper, Group, Text, Badge, Button, Grid, Menu, ActionIcon, Loader, Center,
 } from "@mantine/core";
 import { IconDownload, IconArrowLeft } from "@tabler/icons-react";
-import { getGameByIdLocal, type StoredGame } from "@/lib/storage/games";
+import { getGameById } from "@/actions/games";
+import type { StoredGame } from "@/lib/games/types";
 import { TogyzBoard } from "@/components/board/TogyzBoard";
 import { BoardControls } from "@/components/board/BoardControls";
 import { MoveListPanel } from "@/components/board/MoveListPanel";
@@ -18,9 +19,29 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
   const { id } = use(params);
   const router = useRouter();
   const [game, setGame] = useState<StoredGame | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
 
-  useEffect(() => { setGame(getGameByIdLocal(id)); }, [id]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setLoadError(null);
+      const result = await getGameById(id);
+      if (cancelled) return;
+      if ("error" in result) {
+        setLoadError(result.error);
+        setGame(null);
+      } else {
+        setGame(result.game);
+      }
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const replayData = useMemo(() => {
     if (!game) return { boards: [createInitialBoard()], notations: [] };
@@ -61,7 +82,22 @@ export default function GamePage({ params }: { params: Promise<{ id: string }> }
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `game_${id}.json`; a.click();
   }
 
-  if (!game) return <Stack><Text>Партия не найдена</Text><Button onClick={() => router.push("/archive")}>К архиву</Button></Stack>;
+  if (loading) {
+    return (
+      <Center mih={240}>
+        <Loader />
+      </Center>
+    );
+  }
+
+  if (loadError || !game) {
+    return (
+      <Stack>
+        <Text>{loadError || "Партия не найдена"}</Text>
+        <Button onClick={() => router.push("/archive")}>К архиву</Button>
+      </Stack>
+    );
+  }
 
   return (
     <Stack>

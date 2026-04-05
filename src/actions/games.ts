@@ -5,6 +5,8 @@ import { getServerDb } from "@/lib/supabase/db";
 import { logDbError, logDebug } from "@/lib/logger";
 import { type PitIndex } from "@/lib/engine/types";
 import { createInitialBoard, makeMove } from "@/lib/engine/TogyzEngine";
+import { buildStoredGameFromDb, rowToGameSummary } from "@/lib/games/view";
+import type { GameSummary, StoredGame } from "@/lib/games/types";
 
 export interface SaveGameInput {
   whitePlayer: string;
@@ -100,26 +102,49 @@ export async function saveGame(input: SaveGameInput) {
   return { gameId: game.id };
 }
 
-export async function getGames() {
+export async function getGames(): Promise<{ games: GameSummary[] } | { error: string; games: [] }> {
   const auth = await createClient();
   const { data: { user } } = await auth.auth.getUser();
   if (!user) return { error: "Не авторизован", games: [] };
 
   const db = await getServerDb();
-  const { data, error } = await db
+  const first = await db
     .from("games")
-    .select("*")
+    .select(`
+      id,
+      created_at,
+      notes,
+      result,
+      source_type,
+      ocr_model_used,
+      moves(count)
+    `)
     .eq("created_by", user.id)
     .order("created_at", { ascending: false });
 
-  if (error) {
-    logDbError("games.list", error);
-    return { error: error.message, games: [] };
+  let rows = first.data;
+  if (first.error) {
+    logDbError("games.list", first.error);
+    const fallback = await db
+      .from("games")
+      .select("*")
+      .eq("created_by", user.id)
+      .order("created_at", { ascending: false });
+    if (fallback.error) {
+      return { error: fallback.error.message, games: [] };
+    }
+    rows = fallback.data;
+    const games = (rows || []).map((row) =>
+      rowToGameSummary({ ...row, moves: [{ count: 0 }] } as never)
+    );
+    return { games };
   }
-  return { games: data || [] };
+
+  const games = (rows || []).map((row) => rowToGameSummary(row as never));
+  return { games };
 }
 
-export async function getGameById(id: string) {
+export async function getGameById(id: string): Promise<{ game: StoredGame } | { error: string }> {
   const auth = await createClient();
   const { data: { user } } = await auth.auth.getUser();
   if (!user) return { error: "Не авторизован" };
@@ -142,17 +167,15 @@ export async function getGameById(id: string) {
 
   const { data: moves, error: movesError } = await db
     .from("moves")
-    .select("*")
-    .eq("game_id", id)
-    .order("move_number", { ascending: true })
-    .order("side", { ascending: true });
+    .select("move_number, side, from_pit")
+    .eq("game_id", id);
 
   if (movesError) {
     logDbError("games.moves", movesError);
     return { error: movesError.message };
   }
 
-  return { game, moves: moves || [] };
+  return { game: buildStoredGameFromDb(game, moves || []) };
 }
 
 export async function deleteGame(id: string) {

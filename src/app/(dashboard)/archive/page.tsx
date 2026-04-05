@@ -1,24 +1,52 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
-  Title, Stack, Card, Group, Text, Badge, Button, SimpleGrid, ActionIcon,
+  Title, Stack, Card, Group, Text, Badge, Button, SimpleGrid, ActionIcon, Loader, Center,
 } from "@mantine/core";
 import { IconEye, IconTrash, IconArchive } from "@tabler/icons-react";
-import { getGamesLocal, deleteGameLocal, type StoredGame } from "@/lib/storage/games";
+import { getGames, deleteGame } from "@/actions/games";
+import type { GameSummary } from "@/lib/games/types";
 import { useRouter } from "next/navigation";
 import { notifications } from "@mantine/notifications";
 
 export default function ArchivePage() {
   const router = useRouter();
-  const [games, setGames] = useState<StoredGame[]>([]);
+  const [games, setGames] = useState<GameSummary[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { setGames(getGamesLocal()); }, []);
+  const loadGames = useCallback(async () => {
+    setLoading(true);
+    const result = await getGames();
+    if ("error" in result && result.error) {
+      notifications.show({ message: result.error, color: "red" });
+      setGames([]);
+    } else {
+      setGames(result.games);
+    }
+    setLoading(false);
+  }, []);
 
-  function handleDelete(id: string) {
-    deleteGameLocal(id);
-    setGames(getGamesLocal());
+  useEffect(() => {
+    void loadGames();
+  }, [loadGames]);
+
+  async function handleDelete(id: string) {
+    const result = await deleteGame(id);
+    if (result.error) {
+      notifications.show({ message: result.error, color: "red" });
+      return;
+    }
     notifications.show({ message: "Партия удалена", color: "green" });
+    void loadGames();
+  }
+
+  if (loading) {
+    return (
+      <Center mih={200}>
+        <Loader />
+      </Center>
+    );
   }
 
   return (
@@ -41,17 +69,17 @@ export default function ArchivePage() {
             <Card key={game.id} shadow="sm" padding="lg" withBorder>
               <Stack gap="xs">
                 <Group justify="space-between">
-                  <Badge color={game.result === "1-0" || game.result === "white" ? "blue" : game.result === "0-1" || game.result === "black" ? "red" : "gray"}>
+                  <Badge color={game.result === "1-0" ? "blue" : game.result === "0-1" ? "red" : "gray"}>
                     {game.result}
                   </Badge>
                   <Badge variant="light">{game.sourceType === "ocr" ? "OCR" : "Ручной"}</Badge>
                 </Group>
                 <Text size="sm" fw={500}>{game.whitePlayer} vs {game.blackPlayer}</Text>
                 {game.tournament && <Text size="xs" c="dimmed">{game.tournament}</Text>}
-                <Text size="xs" c="dimmed">{new Date(game.createdAt).toLocaleDateString("ru-RU")} | {game.moves.length} ходов</Text>
+                <Text size="xs" c="dimmed">{new Date(game.createdAt).toLocaleDateString("ru-RU")} | {game.moveCount} ходов</Text>
                 <Group justify="flex-end">
                   <Button size="xs" variant="light" leftSection={<IconEye size={14} />} onClick={() => router.push(`/game/${game.id}`)}>Открыть</Button>
-                  <ActionIcon variant="light" color="red" onClick={() => handleDelete(game.id)}><IconTrash size={14} /></ActionIcon>
+                  <ActionIcon variant="light" color="red" onClick={() => void handleDelete(game.id)}><IconTrash size={14} /></ActionIcon>
                 </Group>
               </Stack>
             </Card>

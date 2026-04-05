@@ -21,7 +21,8 @@ import { BoardControls } from "@/components/board/BoardControls";
 import { type PitIndex, type BoardState } from "@/lib/engine/types";
 import { createInitialBoard, makeMove, getGameResult, boardToFen } from "@/lib/engine/TogyzEngine";
 import { generatePgn, toPgnMoves } from "@/lib/engine/pgn";
-import { saveGameLocal } from "@/lib/storage/games";
+import { saveGame } from "@/actions/games";
+import { normalizeResultForSave } from "@/lib/games/view";
 import { useRouter } from "next/navigation";
 
 interface RecordedMove {
@@ -118,24 +119,25 @@ export default function ManualPage() {
     setViewStep(Math.max(0, Math.min(step, history.length - 1)));
   }
 
-  function handleSave() {
+  async function handleSave() {
     setSaving(true);
-    try {
-      const gameId = saveGameLocal({
-        whitePlayer: whitePlayer || "Бастаушы",
-        blackPlayer: blackPlayer || "Қостаушы",
-        tournament: tournament || undefined,
-        result: gameResult || (getGameResult(board) !== "ongoing" ? getGameResult(board) : "ongoing"),
-        sourceType: "manual",
-        moves: moves.map((m) => ({ moveNumber: m.moveNumber, side: m.side, notation: m.notation })),
-      });
+    const engineRes = getGameResult(board);
+    const result = await saveGame({
+      whitePlayer: whitePlayer || "Бастаушы",
+      blackPlayer: blackPlayer || "Қостаушы",
+      tournament: tournament || undefined,
+      result: normalizeResultForSave(gameResult ?? (engineRes !== "ongoing" ? engineRes : "ongoing")),
+      sourceType: "manual",
+      moves: moves.map((m) => ({ moveNumber: m.moveNumber, side: m.side, notation: m.notation })),
+    });
+
+    if (result.error) {
+      notifications.show({ message: result.error, color: "red" });
+    } else if (result.gameId) {
       notifications.show({ message: "Партия сохранена!", color: "green" });
-      router.push(`/game/${gameId}`);
-    } catch {
-      notifications.show({ message: "Ошибка сохранения", color: "red" });
-    } finally {
-      setSaving(false);
+      router.push(`/game/${result.gameId}`);
     }
+    setSaving(false);
   }
 
   const result = getGameResult(board);
