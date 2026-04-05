@@ -66,6 +66,10 @@ export function toPgnMoves(
   for (let i = 0; i < moves.length; i++) {
     const m = moves[i];
     if (m.side === "white") {
+      // New white row after an unfinished row: next full-move number
+      if (result.length > 0 && !result[result.length - 1].black) {
+        moveNum++;
+      }
       result.push({ moveNumber: moveNum, white: m.notation });
     } else {
       if (result.length > 0 && !result[result.length - 1].black) {
