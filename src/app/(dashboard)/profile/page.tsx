@@ -1,66 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  Title,
-  Stack,
-  Paper,
-  TextInput,
-  Button,
-  Group,
-  Text,
-  Badge,
-  Loader,
-  Center,
-} from "@mantine/core";
+import { Title, Stack, Paper, TextInput, Button, Group, Text, Badge } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconUser } from "@tabler/icons-react";
-import { getProfile, updateProfile } from "@/actions/auth";
+
+const PROFILE_KEY = "togyz_profile";
+
+interface LocalProfile { displayName: string; club: string; rating: number; }
+
+function load(): LocalProfile {
+  if (typeof window === "undefined") return { displayName: "", club: "", rating: 1200 };
+  try { const r = localStorage.getItem(PROFILE_KEY); return r ? JSON.parse(r) : { displayName: "", club: "", rating: 1200 }; } catch { return { displayName: "", club: "", rating: 1200 }; }
+}
 
 export default function ProfilePage() {
   const [displayName, setDisplayName] = useState("");
   const [club, setClub] = useState("");
   const [rating, setRating] = useState(1200);
-  const [role, setRole] = useState("player");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
+  useEffect(() => { const p = load(); setDisplayName(p.displayName); setClub(p.club); setRating(p.rating); }, []);
 
-  async function loadProfile() {
-    setLoading(true);
-    const data = await getProfile();
-    if (data) {
-      setDisplayName(data.display_name || "");
-      setClub(data.club || "");
-      setRating(data.rating || 1200);
-      setRole(data.role || "player");
-    }
-    setLoading(false);
+  function handleSave() {
+    localStorage.setItem(PROFILE_KEY, JSON.stringify({ displayName, club, rating }));
+    notifications.show({ message: "Профиль сохранён", color: "green" });
   }
-
-  async function handleSave() {
-    setSaving(true);
-    const formData = new FormData();
-    formData.set("displayName", displayName);
-    formData.set("club", club);
-    const result = await updateProfile(formData);
-    setSaving(false);
-    if (result.error) {
-      notifications.show({ message: result.error, color: "red" });
-    } else {
-      notifications.show({ message: "Профиль сохранён в Supabase", color: "green" });
-    }
-  }
-
-  if (loading) return <Center h={300}><Loader /></Center>;
 
   return (
     <Stack>
       <Title order={2}>Профиль</Title>
-
       <Paper p="md" withBorder maw={500}>
         <Stack>
           <Group>
@@ -68,15 +36,14 @@ export default function ProfilePage() {
             <div>
               <Text fw={600}>{displayName || "Игрок"}</Text>
               <Group gap="xs">
-                <Badge size="sm">{role}</Badge>
+                <Badge size="sm">player</Badge>
                 <Badge size="sm" variant="light">Рейтинг: {rating}</Badge>
               </Group>
             </div>
           </Group>
-
           <TextInput label="Имя" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Ваше имя" />
           <TextInput label="Клуб" value={club} onChange={(e) => setClub(e.target.value)} placeholder="Название клуба" />
-          <Button onClick={handleSave} loading={saving}>Сохранить</Button>
+          <Button onClick={handleSave}>Сохранить</Button>
         </Stack>
       </Paper>
     </Stack>

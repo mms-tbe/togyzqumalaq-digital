@@ -32,7 +32,7 @@ import {
   IconPlayerPlay,
 } from "@tabler/icons-react";
 import { processOcrDirect, type OcrModel } from "@/actions/ocr";
-import { saveGame } from "@/actions/games";
+import { saveGameLocal } from "@/lib/storage/games";
 import { parseOcrResponse, type OcrResult, type OcrMove } from "@/lib/ocr/parser";
 import { type PitIndex } from "@/lib/engine/types";
 import { createInitialBoard, makeMove, getGameResult, boardToFen } from "@/lib/engine/TogyzEngine";
@@ -274,23 +274,22 @@ export default function UploadPage() {
       }
     }
 
-    const result = await saveGame({
-      whitePlayer: whitePlayer || "Бастаушы",
-      blackPlayer: blackPlayer || "Қостаушы",
-      tournament: tournament || undefined,
-      result: gameResult || "ongoing",
-      sourceType: "ocr",
-      ocrModelUsed: selectedModel,
-      moves: movesWithNotation,
-    });
-
-    setSaving(false);
-    if (result.error) {
-      notifications.show({ message: result.error, color: "red" });
-      return;
+    try {
+      const gameId = saveGameLocal({
+        whitePlayer: whitePlayer || "Бастаушы",
+        blackPlayer: blackPlayer || "Қостаушы",
+        tournament: tournament || undefined,
+        result: gameResult || "ongoing",
+        sourceType: "ocr",
+        ocrModelUsed: selectedModel,
+        moves: movesWithNotation,
+      });
+      notifications.show({ message: "Партия сохранена!", color: "green" });
+      router.push(`/game/${gameId}`);
+    } catch {
+      notifications.show({ message: "Ошибка сохранения", color: "red" });
     }
-    notifications.show({ message: "Партия сохранена в Supabase!", color: "green" });
-    router.push(`/game/${result.gameId}`);
+    setSaving(false);
   }
 
   return (

@@ -1,6 +1,12 @@
 /**
- * Client-side game storage using localStorage.
- * Bypasses all Supabase RLS/role issues on this dedicated instance.
+ * Game storage with Supabase fallback to localStorage.
+ *
+ * Supabase dedicated instance has broken PostgREST roles:
+ * - anon JWT → "permission denied to set role anon"
+ * - user JWT → "role '' does not exist"
+ *
+ * Auth (GoTrue) works, but DB (PostgREST) doesn't.
+ * So: Auth via Supabase, game data via localStorage.
  */
 
 export interface StoredGame {
@@ -13,6 +19,7 @@ export interface StoredGame {
   moves: { moveNumber: number; side: "white" | "black"; notation: string }[];
   createdAt: string;
   notes?: string;
+  ocrModelUsed?: string;
 }
 
 const STORAGE_KEY = "togyz_games";
