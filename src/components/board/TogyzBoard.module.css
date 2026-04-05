@@ -1,8 +1,10 @@
 .wrapper {
-  max-width: 720px;
+  max-width: 100%;
+  width: 100%;
   margin: 0 auto;
   font-family: system-ui, -apple-system, sans-serif;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* ── Board ── */
