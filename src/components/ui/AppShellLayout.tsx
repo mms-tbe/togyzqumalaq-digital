@@ -35,9 +35,10 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
           <Group gap="xs" wrap="nowrap" style={{ minWidth: 0, flex: 1 }}>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
             <Image src="/logo.jpg" alt="Togyzqumalaq" width={80} height={80} style={{ flexShrink: 0 }} />
-            <Title order={3} style={{ fontSize: 18, letterSpacing: -0.3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              Togyzqumalaq Digital
-            </Title>
+            <div style={{ lineHeight: 1.15, flexShrink: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: -0.3 }}>Togyzqumalaq</div>
+              <div style={{ fontSize: 14, fontWeight: 600, textAlign: "center", color: "#666" }}>Digital</div>
+            </div>
           </Group>
           <div style={{ flexShrink: 0 }}>
             <UserMenu />
