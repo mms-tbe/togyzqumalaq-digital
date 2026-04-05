@@ -34,7 +34,7 @@ export default function LoginPage() {
   return (
     <Card shadow="md" padding="xl" radius="md" withBorder>
       <Stack align="center" mb="md">
-        <Image src="/logo.png" alt="Togyzqumalaq" width={128} height={128} />
+        <Image src="/logo.jpg" alt="Togyzqumalaq" width={256} height={256} />
         <Title order={2}>Вход</Title>
         <Text c="dimmed" size="sm">
           Togyzqumalaq Digital

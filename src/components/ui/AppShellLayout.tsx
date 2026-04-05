@@ -29,7 +29,7 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShell
-      header={{ height: 60 }}
+      header={{ height: 90 }}
       navbar={{ width: 260, breakpoint: "sm", collapsed: { mobile: !opened } }}
       padding="sm"
     >
@@ -37,7 +37,7 @@ export function AppShellLayout({ children }: { children: React.ReactNode }) {
         <Group h="100%" px="sm" justify="space-between">
           <Group gap="xs">
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Image src="/logo.png" alt="Togyzqumalaq" width={40} height={40} />
+            <Image src="/logo.jpg" alt="Togyzqumalaq" width={80} height={80} />
             <Title order={3} style={{ fontSize: 18, letterSpacing: -0.3 }}>
               Togyzqumalaq Digital
             </Title>
