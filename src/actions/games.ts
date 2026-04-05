@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createAnonClient } from "@/lib/supabase/admin";
 import { type PitIndex } from "@/lib/engine/types";
 import { createInitialBoard, makeMove, boardToFen } from "@/lib/engine/TogyzEngine";
 
@@ -20,12 +19,11 @@ export interface SaveGameInput {
 
 export async function saveGame(input: SaveGameInput) {
   const supabase = await createClient();
-  const db = createAnonClient(); // Use anon client for DB (user JWT has empty role)
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Не авторизован" };
 
   // Ensure profile exists
-  await db.from("profiles").upsert(
+  await supabase.from("profiles").upsert(
     { id: user.id, display_name: user.email || "" },
     { onConflict: "id", ignoreDuplicates: true }
   );
@@ -58,8 +56,8 @@ export async function saveGame(input: SaveGameInput) {
   else if (input.result === "0-1") gameResult = "black";
   else if (input.result === "1/2-1/2" || input.result === "½-½") gameResult = "draw";
 
-  // Create game
-  const { data: game, error: gameError } = await db
+  // Create game (must use session client: RLS policies are TO authenticated)
+  const { data: game, error: gameError } = await supabase
     .from("games")
     .insert({
       white_player_id: user.id,
@@ -80,7 +78,7 @@ export async function saveGame(input: SaveGameInput) {
 
   // Insert moves
   if (movesWithFen.length > 0) {
-    const { error: movesError } = await db.from("moves").insert(
+    const { error: movesError } = await supabase.from("moves").insert(
       movesWithFen.map((m) => ({
         game_id: game.id,
         move_number: m.moveNumber,
@@ -98,11 +96,10 @@ export async function saveGame(input: SaveGameInput) {
 
 export async function getGames() {
   const supabase = await createClient();
-  const db = createAnonClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Не авторизован", games: [] };
 
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from("games")
     .select("*")
     .eq("created_by", user.id)
@@ -113,9 +110,9 @@ export async function getGames() {
 }
 
 export async function getGameById(id: string) {
-  const db = createAnonClient();
+  const supabase = await createClient();
 
-  const { data: game, error: gameError } = await db
+  const { data: game, error: gameError } = await supabase
     .from("games")
     .select("*")
     .eq("id", id)
@@ -123,7 +120,7 @@ export async function getGameById(id: string) {
 
   if (gameError || !game) return { error: gameError?.message || "Партия не найдена" };
 
-  const { data: moves, error: movesError } = await db
+  const { data: moves, error: movesError } = await supabase
     .from("moves")
     .select("*")
     .eq("game_id", id)
@@ -136,8 +133,11 @@ export async function getGameById(id: string) {
 }
 
 export async function deleteGame(id: string) {
-  const db = createAnonClient();
-  const { error } = await db.from("games").delete().eq("id", id);
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Не авторизован" };
+
+  const { error } = await supabase.from("games").delete().eq("id", id);
   if (error) return { error: error.message };
   return { success: true };
 }

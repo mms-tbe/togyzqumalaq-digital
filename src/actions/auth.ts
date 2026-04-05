@@ -71,12 +71,10 @@ export async function getUser() {
 
 export async function getProfile() {
   const supabase = await createClient();
-  const { createAnonClient } = await import("@/lib/supabase/admin");
-  const db = createAnonClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data } = await db
+  const { data } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
@@ -87,12 +85,10 @@ export async function getProfile() {
 
 export async function updateProfile(formData: FormData) {
   const supabase = await createClient();
-  const { createAnonClient } = await import("@/lib/supabase/admin");
-  const db = createAnonClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Не авторизован" };
 
-  const { error } = await db
+  const { error } = await supabase
     .from("profiles")
     .update({
       display_name: formData.get("displayName") as string,

@@ -1,8 +1,8 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Admin/anon client that bypasses user JWT (which has empty role on this instance).
- * Uses anon key directly — RLS policies are USING(true) so this is safe for MVP.
+ * Client with anon key only (no user session). Do not use for tables whose RLS is
+ * `TO authenticated` — use `@/lib/supabase/server` `createClient()` so the JWT is sent.
  */
 export function createAnonClient() {
   return createSupabaseClient(
