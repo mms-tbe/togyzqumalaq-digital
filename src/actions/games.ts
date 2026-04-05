@@ -1,8 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getServerDb } from "@/lib/supabase/db";
-import { logDbError, logDebug } from "@/lib/logger";
+import { logDbError } from "@/lib/logger";
 import { type PitIndex } from "@/lib/engine/types";
 import { createInitialBoard, makeMove } from "@/lib/engine/TogyzEngine";
 import { buildStoredGameFromDb, rowToGameSummary } from "@/lib/games/view";
@@ -22,14 +21,11 @@ export interface SaveGameInput {
 }
 
 export async function saveGame(input: SaveGameInput) {
-  const auth = await createClient();
-  const { data: { user } } = await auth.auth.getUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Не авторизован" };
 
-  const db = await getServerDb();
-  logDebug("games.save", "using_db", { serviceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY });
-
-  await db.from("profiles").upsert(
+  await supabase.from("profiles").upsert(
     { id: user.id, display_name: user.email || "" },
     { onConflict: "id", ignoreDuplicates: true }
   );
@@ -60,7 +56,7 @@ export async function saveGame(input: SaveGameInput) {
   else if (input.result === "0-1") gameResult = "black";
   else if (input.result === "1/2-1/2" || input.result === "½-½") gameResult = "draw";
 
-  const { data: game, error: gameError } = await db
+  const { data: game, error: gameError } = await supabase
     .from("games")
     .insert({
       white_player_id: user.id,
@@ -83,7 +79,7 @@ export async function saveGame(input: SaveGameInput) {
   }
 
   if (movesWithFen.length > 0) {
-    const { error: movesError } = await db.from("moves").insert(
+    const { error: movesError } = await supabase.from("moves").insert(
       movesWithFen.map((m) => ({
         game_id: game.id,
         move_number: m.moveNumber,
@@ -103,12 +99,11 @@ export async function saveGame(input: SaveGameInput) {
 }
 
 export async function getGames(): Promise<{ games: GameSummary[] } | { error: string; games: [] }> {
-  const auth = await createClient();
-  const { data: { user } } = await auth.auth.getUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Не авторизован", games: [] };
 
-  const db = await getServerDb();
-  const first = await db
+  const first = await supabase
     .from("games")
     .select(`
       id,
@@ -125,7 +120,7 @@ export async function getGames(): Promise<{ games: GameSummary[] } | { error: st
   let rows = first.data;
   if (first.error) {
     logDbError("games.list", first.error);
-    const fallback = await db
+    const fallback = await supabase
       .from("games")
       .select("*")
       .eq("created_by", user.id)
@@ -145,12 +140,11 @@ export async function getGames(): Promise<{ games: GameSummary[] } | { error: st
 }
 
 export async function getGameById(id: string): Promise<{ game: StoredGame } | { error: string }> {
-  const auth = await createClient();
-  const { data: { user } } = await auth.auth.getUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Не авторизован" };
 
-  const db = await getServerDb();
-  const { data: game, error: gameError } = await db
+  const { data: game, error: gameError } = await supabase
     .from("games")
     .select("*")
     .eq("id", id)
@@ -165,7 +159,7 @@ export async function getGameById(id: string): Promise<{ game: StoredGame } | { 
     return { error: "Партия не найдена" };
   }
 
-  const { data: moves, error: movesError } = await db
+  const { data: moves, error: movesError } = await supabase
     .from("moves")
     .select("move_number, side, from_pit")
     .eq("game_id", id);
@@ -179,12 +173,11 @@ export async function getGameById(id: string): Promise<{ game: StoredGame } | { 
 }
 
 export async function deleteGame(id: string) {
-  const auth = await createClient();
-  const { data: { user } } = await auth.auth.getUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Не авторизован" };
 
-  const db = await getServerDb();
-  const { error } = await db
+  const { error } = await supabase
     .from("games")
     .delete()
     .eq("id", id)

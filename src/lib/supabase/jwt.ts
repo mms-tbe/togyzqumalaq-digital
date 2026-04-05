@@ -1,7 +1,6 @@
 /**
- * Supabase anon / service_role keys from the dashboard are JWTs (header.payload.sig).
- * Malformed env (short string, secret name instead of key) triggers:
- * "Expected 3 parts in JWT; got 1"
+ * Supabase anon public key from the dashboard is a JWT (header.payload.sig).
+ * Malformed env triggers: "Expected 3 parts in JWT; got 1"
  */
 
 /** Trim, remove accidental line breaks in pasted JWTs, strip optional "Bearer " prefix */

@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getServerDb } from "@/lib/supabase/db";
 import { logDbError } from "@/lib/logger";
 import { redirect } from "next/navigation";
 
@@ -25,8 +24,7 @@ export async function signUp(formData: FormData) {
 
   // Create profile manually (no DB trigger on auth.users in this instance)
   if (data.user) {
-    const db = await getServerDb();
-    await db.from("profiles").upsert({
+    await supabase.from("profiles").upsert({
       id: data.user.id,
       display_name: displayName || email,
     });
@@ -51,8 +49,7 @@ export async function signIn(formData: FormData) {
 
   // Ensure profile exists
   if (data.user) {
-    const db = await getServerDb();
-    await db.from("profiles").upsert(
+    await supabase.from("profiles").upsert(
       { id: data.user.id, display_name: data.user.email || "" },
       { onConflict: "id", ignoreDuplicates: true }
     );
@@ -78,9 +75,7 @@ export async function getProfile() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const db = await getServerDb();
-
-  const { data, error } = await db
+  const { data, error } = await supabase
     .from("profiles")
     .select("*")
     .eq("id", user.id)
@@ -95,9 +90,7 @@ export async function updateProfile(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Не авторизован" };
 
-  const db = await getServerDb();
-
-  const { error } = await db
+  const { error } = await supabase
     .from("profiles")
     .update({
       display_name: formData.get("displayName") as string,
